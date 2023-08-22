@@ -8,20 +8,20 @@
     ".NETCoreApp,Version=v3.1": {
       "DiscordBot/1.0.0": {
         "dependencies": {
-          "Discord.Net.Core": "3.10.0",
-          "Discord.Net.WebSocket": "3.10.0",
+          "Discord.Net.Core": "3.12.0",
+          "Discord.Net.WebSocket": "3.12.0",
           "Microsoft.Extensions.Configuration": "7.0.0",
           "Microsoft.Extensions.Configuration.FileExtensions": "7.0.0",
           "Microsoft.Extensions.Configuration.Json": "7.0.0",
           "OpenAI": "1.3.0",
-          "System.Data.SQLite": "1.0.117",
+          "System.Data.SQLite": "1.0.118",
           "PluginTest": "1.0.0.0"
         },
         "runtime": {
           "DiscordBot.dll": {}
         }
       },
-      "Discord.Net.Core/3.10.0": {
+      "Discord.Net.Core/3.12.0": {
         "dependencies": {
           "Newtonsoft.Json": "13.0.2",
           "System.Collections.Immutable": "1.3.1",
@@ -30,31 +30,31 @@
         },
         "runtime": {
           "lib/netstandard2.1/Discord.Net.Core.dll": {
-            "assemblyVersion": "3.10.0.0",
-            "fileVersion": "3.10.0.0"
+            "assemblyVersion": "3.12.0.0",
+            "fileVersion": "3.12.0.0"
           }
         }
       },
-      "Discord.Net.Rest/3.10.0": {
+      "Discord.Net.Rest/3.12.0": {
         "dependencies": {
-          "Discord.Net.Core": "3.10.0"
+          "Discord.Net.Core": "3.12.0"
         },
         "runtime": {
           "lib/netstandard2.1/Discord.Net.Rest.dll": {
-            "assemblyVersion": "3.10.0.0",
-            "fileVersion": "3.10.0.0"
+            "assemblyVersion": "3.12.0.0",
+            "fileVersion": "3.12.0.0"
           }
         }
       },
-      "Discord.Net.WebSocket/3.10.0": {
+      "Discord.Net.WebSocket/3.12.0": {
         "dependencies": {
-          "Discord.Net.Core": "3.10.0",
-          "Discord.Net.Rest": "3.10.0"
+          "Discord.Net.Core": "3.12.0",
+          "Discord.Net.Rest": "3.12.0"
         },
         "runtime": {
           "lib/netstandard2.1/Discord.Net.WebSocket.dll": {
-            "assemblyVersion": "3.10.0.0",
-            "fileVersion": "3.10.0.0"
+            "assemblyVersion": "3.12.0.0",
+            "fileVersion": "3.12.0.0"
           }
         }
       },
@@ -264,11 +264,11 @@
           }
         }
       },
-      "Stub.System.Data.SQLite.Core.NetStandard/1.0.117": {
+      "Stub.System.Data.SQLite.Core.NetStandard/1.0.118": {
         "runtime": {
           "lib/netstandard2.1/System.Data.SQLite.dll": {
-            "assemblyVersion": "1.0.117.0",
-            "fileVersion": "1.0.117.0"
+            "assemblyVersion": "1.0.118.0",
+            "fileVersion": "1.0.118.0"
           }
         },
         "runtimeTargets": {
@@ -285,12 +285,12 @@
           "runtimes/win-x64/native/SQLite.Interop.dll": {
             "rid": "win-x64",
             "assetType": "native",
-            "fileVersion": "1.0.117.0"
+            "fileVersion": "1.0.118.0"
           },
           "runtimes/win-x86/native/SQLite.Interop.dll": {
             "rid": "win-x86",
             "assetType": "native",
-            "fileVersion": "1.0.117.0"
+            "fileVersion": "1.0.118.0"
           }
         }
       },
@@ -362,25 +362,25 @@
           }
         }
       },
-      "System.Data.SQLite/1.0.117": {
+      "System.Data.SQLite/1.0.118": {
         "dependencies": {
-          "System.Data.SQLite.Core": "1.0.117",
-          "System.Data.SQLite.EF6": "1.0.117"
+          "System.Data.SQLite.Core": "1.0.118",
+          "System.Data.SQLite.EF6": "1.0.118"
         }
       },
-      "System.Data.SQLite.Core/1.0.117": {
+      "System.Data.SQLite.Core/1.0.118": {
         "dependencies": {
-          "Stub.System.Data.SQLite.Core.NetStandard": "1.0.117"
+          "Stub.System.Data.SQLite.Core.NetStandard": "1.0.118"
         }
       },
-      "System.Data.SQLite.EF6/1.0.117": {
+      "System.Data.SQLite.EF6/1.0.118": {
         "dependencies": {
           "EntityFramework": "6.4.4"
         },
         "runtime": {
           "lib/netstandard2.1/System.Data.SQLite.EF6.dll": {
-            "assemblyVersion": "1.0.117.0",
-            "fileVersion": "1.0.117.0"
+            "assemblyVersion": "1.0.118.0",
+            "fileVersion": "1.0.118.0"
           }
         }
       },
@@ -631,26 +631,26 @@
       "serviceable": false,
       "sha512": ""
     },
-    "Discord.Net.Core/3.10.0": {
+    "Discord.Net.Core/3.12.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-GnsLmSYDShws23rqzdf6aOwIG70cqYUHY7i2cFdj3YVz/c8OelsbLndnFvkg6yELcy7aD60NSHyYZ5oMsgDavA==",
-      "path": "discord.net.core/3.10.0",
-      "hashPath": "discord.net.core.3.10.0.nupkg.sha512"
+      "sha512": "sha512-9MU124jnJYqfOt5nIGtpUZhQCFR6Ag2pB5KNDZRqZNMsKE2L3OkHuzDeD+iLSbOYYRPrbk+dfKOdnJZl+K1itA==",
+      "path": "discord.net.core/3.12.0",
+      "hashPath": "discord.net.core.3.12.0.nupkg.sha512"
     },
-    "Discord.Net.Rest/3.10.0": {
+    "Discord.Net.Rest/3.12.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-N2nlOCoZCTyQbDlwqDKcqknOgwAbeJgy2r9DAUNsNxcO763ru67WK3GxkA7V7QgZ80RU9rLB3fr9jvjJ14pUBA==",
-      "path": "discord.net.rest/3.10.0",
-      "hashPath": "discord.net.rest.3.10.0.nupkg.sha512"
+      "sha512": "sha512-lyp+1bVd4RnOmEMgM//yJ3zD7PZmT9tr6ljl/SPH66/kzlxex6kvlV7TyH7K93S0joKHzvGWm+lL0rEbkiFXPQ==",
+      "path": "discord.net.rest/3.12.0",
+      "hashPath": "discord.net.rest.3.12.0.nupkg.sha512"
     },
-    "Discord.Net.WebSocket/3.10.0": {
+    "Discord.Net.WebSocket/3.12.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-pA581o5JoAAFlintQEeDncIr99WHZOWzwnZWLuPiSW4BmFjG/oYf8F6C60Ob/5w1C1QB0k72NLgh8mEwnTCI5Q==",
-      "path": "discord.net.websocket/3.10.0",
-      "hashPath": "discord.net.websocket.3.10.0.nupkg.sha512"
+      "sha512": "sha512-bipottjJzE/yEc4CZmCURRboROuMqHQRGma7L+qYfv3VwNgb0+j2rxvawcY7Tr77EuX0EjnnNBGoKcdJClGYEQ==",
+      "path": "discord.net.websocket/3.12.0",
+      "hashPath": "discord.net.websocket.3.12.0.nupkg.sha512"
     },
     "EntityFramework/6.4.4": {
       "type": "package",
@@ -799,12 +799,12 @@
       "path": "runtime.win-x86.runtime.native.system.data.sqlclient.sni/4.4.0",
       "hashPath": "runtime.win-x86.runtime.native.system.data.sqlclient.sni.4.4.0.nupkg.sha512"
     },
-    "Stub.System.Data.SQLite.Core.NetStandard/1.0.117": {
+    "Stub.System.Data.SQLite.Core.NetStandard/1.0.118": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-x1zzPC/A4MmiKGDLoxLE6O5KLu7Kz7dyzhPQzlqYFTFcXmXAtM7hNNWpGw5yLEz833AnGbd/kxoitXArgR4YyA==",
-      "path": "stub.system.data.sqlite.core.netstandard/1.0.117",
-      "hashPath": "stub.system.data.sqlite.core.netstandard.1.0.117.nupkg.sha512"
+      "sha512": "sha512-4TS8IZvDj0ud6utxfXI6zv9Ditk4U9Kt9KqLyAIQGcU3GXp5oGBHgGZifq+APcqRCayuN/MSE8t9ZZmygtU28A==",
+      "path": "stub.system.data.sqlite.core.netstandard/1.0.118",
+      "hashPath": "stub.system.data.sqlite.core.netstandard.1.0.118.nupkg.sha512"
     },
     "System.Buffers/4.5.1": {
       "type": "package",
@@ -855,26 +855,26 @@
       "path": "system.data.sqlclient/4.8.1",
       "hashPath": "system.data.sqlclient.4.8.1.nupkg.sha512"
     },
-    "System.Data.SQLite/1.0.117": {
+    "System.Data.SQLite/1.0.118": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-yL8FPHoK9LfP9mPk0FGTJlF8ZiqujKfeyn2lIdE/5LyKDhhyXRNWtOF2dN6+OpBdmO1ZSHaYr8HyOY3a3rZ4sw==",
-      "path": "system.data.sqlite/1.0.117",
-      "hashPath": "system.data.sqlite.1.0.117.nupkg.sha512"
+      "sha512": "sha512-lm+Qc7SxuMNl/HpyAbJhQng+snqUs38jaC+GvKoYm5/w+RCTspvM6aFvdWXn6+yhntJR8FnbPWZ7oi2K4UL2vQ==",
+      "path": "system.data.sqlite/1.0.118",
+      "hashPath": "system.data.sqlite.1.0.118.nupkg.sha512"
     },
-    "System.Data.SQLite.Core/1.0.117": {
+    "System.Data.SQLite.Core/1.0.118": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-lGfOhA3QQod9XhdWYqLgNgbgq5uZnVG6DtnhDAdPisbLpTTgZBNbeGnp+GWt8C+3EyaqBYTGJWXcxHlHKwo05A==",
-      "path": "system.data.sqlite.core/1.0.117",
-      "hashPath": "system.data.sqlite.core.1.0.117.nupkg.sha512"
+      "sha512": "sha512-2V1PsfBeqWlZxF/VtB8lQKPfDBayCU8zD5Xc3Mq7cILOa2ZqpPDSwMP0fTfk1gtGSStSk//DxKiGy6zwCQs7Uw==",
+      "path": "system.data.sqlite.core/1.0.118",
+      "hashPath": "system.data.sqlite.core.1.0.118.nupkg.sha512"
     },
-    "System.Data.SQLite.EF6/1.0.117": {
+    "System.Data.SQLite.EF6/1.0.118": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-Q1y/Jz1K63okYr1Jea7DyNGrOyWJiOpPHdpJ9cbjWAJanKJ0RUAZ8HQHKy9oEdxfjv0kfPR+Up9QcWni8lryCQ==",
-      "path": "system.data.sqlite.ef6/1.0.117",
-      "hashPath": "system.data.sqlite.ef6.1.0.117.nupkg.sha512"
+      "sha512": "sha512-6OqO3OA8tej0BidxjYxutfR2HlodiYAA3qU4BtYe/wQdXJ75rumiAr9inYJaxFkwgGb8jW1qyFy953ZFyCOe8A==",
+      "path": "system.data.sqlite.ef6/1.0.118",
+      "hashPath": "system.data.sqlite.ef6.1.0.118.nupkg.sha512"
     },
     "System.Diagnostics.Debug/4.3.0": {
       "type": "package",

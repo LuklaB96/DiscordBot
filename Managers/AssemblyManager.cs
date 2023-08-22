@@ -17,7 +17,7 @@ namespace DiscordBot.Managers
     public class AssemblyManager
     {
         private const string path = "Plugins/";
-        private readonly Logger logger;
+        private Logger logger;
 
         public List<ICommand> Plugins { get; set; }
         public AssemblyManager()

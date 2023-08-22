@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <version>1.0.8633.36182</version>
+  <version>1.0.8634.27385</version>
   <configNameSuffix>_config</configNameSuffix>
   <GlobalCommandCreated>true</GlobalCommandCreated>
   <dirPath>Plugins/</dirPath>

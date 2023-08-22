@@ -11,6 +11,7 @@ using System.IO;
 using DiscordBot.Utility;
 using PluginTest.Interfaces;
 using PluginTest.Enums;
+using PluginTest;
 
 namespace DiscordBot.Structures
 {
@@ -41,7 +42,9 @@ namespace DiscordBot.Structures
             var token = appConfig["bot_token"];
             this.args = args;
 
-            
+            var guild = _client?.GetGuild(0);
+
+
             //await Giveaway.UpdateList();
 
             var config = new DiscordSocketConfig
@@ -141,8 +144,8 @@ namespace DiscordBot.Structures
                 }
             }
 
-            TaskManager = new TaskQueueManager(_client, 60);
-            //TaskManager.Start(AutoReset: true);
+            TaskManager = new TaskQueueManager(_client, assemblyManager, 1);
+            TaskManager.Start(AutoReset: true);
         }
 
         private async Task HandleReactionAdded(Cacheable<IUserMessage, ulong> cache, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)

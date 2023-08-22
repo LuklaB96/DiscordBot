@@ -40,7 +40,6 @@ namespace DiscordBot.Handlers
                 };
 
                 var pluginName = await Database.SelectQueryAsync(query,parameters);
-
                 foreach(ICommand plugin in assemblyManager.Plugins)
                 {
                     if(plugin.Config.pluginName.ToLower() == pluginName[0].ToLower())
