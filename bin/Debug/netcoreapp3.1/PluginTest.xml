@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>PluginTest</name>
+    </assembly>
+    <members>
+        <member name="M:PluginTest.Config.#ctor(System.String,System.Boolean,System.String,System.String,System.String,PluginTest.Interfaces.ILogger)">
+            <summary>
+            
+            </summary>
+            <param name="dirPath"></param>
+            <param name="GlobalCommandCreated"></param>
+            <param name="configNameSuffix"></param>
+        </member>
+        <member name="M:PluginTest.Config.SaveToXml(System.String)">
+            <summary>
+            Saves the file to .xml format, the argument is only <paramref name="fileName"/>, and the rest consists of the information provided in the <see cref="T:PluginTest.Config"/> class constructor. 
+            The file is created according to the scheme: <paramref name="dirPath"/> + <paramref name="fileName"/> + <paramref name="configNameSuffix"/> + <paramref name="fileExtension"/>, where <paramref name="fileExtension"/> has a const value ".xml"
+            </summary>
+            <param name="fileName"></param>
+        </member>
+        <member name="M:PluginTest.Config.LoadXml(System.String)">
+            <summary>
+            The argument is only <paramref name="fileName"/>, and the rest consists of the information provided in the class constructor. 
+            The file is loaded based on the path scheme: <paramref name="dirPath"/> + <paramref name="fileName"/> + <paramref name="configNameSuffix"/> + <paramref name="fileExtension"/>, where <paramref name="fileExtension"/> has a const value ".xml"
+            </summary>
+            <param name="fileName"></param>
+            <returns>returns <see cref="T:PluginTest.Config"/> class object or <see langword="null"/> if file does not exists.</returns>
+        </member>
+        <member name="P:PluginTest.Interfaces.ICommand.DatabaseTableProperties">
+            <summary>
+            When the plugin is loaded, the database will check if the table exists, if not, it will create a new one according to the following scheme: pluginname_tablename.
+            </summary>
+        </member>
+        <member name="M:PluginTest.Uuid.Create(System.String,System.String)">
+            <summary>
+            Generates a standardized uuid. 
+            </summary>
+            <param name="name">Enter a variable called "Name", which is implemented with the interface, this is a unique identifier for each plugin.</param>
+            <param name="suffix">It allows you to identify the purpose of the component, can be left blank.</param>
+            <returns>Return uuid: pluginname_guid_suffix</returns>
+        </member>
+    </members>
+</doc>
