@@ -12,107 +12,112 @@ using PluginTest;
 using DiscordBot.AssemblyHelpers;
 using Discord;
 using Discord.WebSocket;
+using DiscordBot.Plugins;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DiscordBot.Managers
 {
     public class AssemblyManager
     {
         private const string path = "Plugins/";
-        private Logger logger;
+        private Logger Logger { get; set; }
+        private Database Database { get; set; }
+        private IServiceProvider ServiceProvider { get; set; }
+        
 
-        public List<ICommand> Plugins { get; set; }
-        public AssemblyManager()
+        public PluginRegistry Plugins { get; set; }
+        public AssemblyManager(IServiceProvider serviceProvider)
         {
-            logger = new Logger();
+            Logger = serviceProvider.GetService<Logger>();
+            Database = serviceProvider.GetService<Database>();
+            Plugins = new PluginRegistry(serviceProvider);
+            this.ServiceProvider = serviceProvider;
         }
         /// <summary>
         /// Loads all plugins to a List of ICommand objects for later use
         /// </summary>
         public async Task Initalize() 
         { 
-            Plugins = await LoadAllPlugins(path);
+            await LoadAllPlugins(path);
         }
         /// <summary>
         /// Loads all plugins from the specified <paramref name="path"/>. It checks if the plugin has plugin_config.xml and creates or loads it as needed.
         /// </summary>
         /// <param name="path"></param>
         /// <returns>Returns <see cref="List{T}"/> containing all active <see cref="ICommand"/> plugins</returns>
-        public async Task<List<ICommand>> LoadAllPlugins(string path)
+        public async Task<Task> LoadAllPlugins(string path)
         {
             /*
              * TO DO:
              * Clean up this mess
              * 
              */
-            logger.Log("Plugin Manager", "Loading plugins...", LogLevel.Info);
+            Logger.Log("Plugin Manager", "Loading plugins...", LogLevel.Info);
 
-            List<ICommand> plugins = new List<ICommand>();
-
-            Database db = new Database();
-
-            AssemblyLoader assemblyLoader = new AssemblyLoader(path);
+            AssemblyLoader assemblyLoader = new AssemblyLoader(path,ServiceProvider);
             assemblyLoader.Load();
 
             foreach (AssemblyData data in assemblyLoader)
             {
-                await data.Plugin.Initalize(db, logger);
+                IPlugin plugin = (IPlugin)data.Plugin;
+                await plugin.Initalize(Database, Logger);
 
-                if (string.IsNullOrEmpty(data.Plugin.Name))
-                    data.Plugin.Name = data.AssemblyName;
+                if (string.IsNullOrEmpty(plugin.Name))
+                    plugin.Name = data.AssemblyName;
 
 
                 string assemblyVersion = data.AssemblyVersion;
-                var pluginNameStatus = await CheckPluginName(data.Plugin.Name, data.AssemblyName);
+                var pluginNameStatus = await CheckPluginName(plugin.Name, data.AssemblyName);
 
-                foreach (KeyValuePair<string, string> TableProperties in data.Plugin.DatabaseTableProperties)
+                foreach (KeyValuePair<string, string> TableProperties in plugin.DatabaseTableProperties)
                 {
-                    await db.CheckCreatePluginTable(data.Plugin.Name, TableProperties.Key, TableProperties.Value);
+                    await Database.CheckCreatePluginTable(plugin.Name, TableProperties.Key, TableProperties.Value);
                 }
 
                 switch (pluginNameStatus)
                 {
                     case AssemblyDatabaseStatus.NOT_EXISTS:
-                        await SaveAssemblyInfoToDatabase(data.AssemblyName, data.Plugin.Name);
+                        await SaveAssemblyInfoToDatabase(data.AssemblyName, plugin.Name);
                         break;
                     case AssemblyDatabaseStatus.MISMATCH:
-                        await UpdateAssemblyInfoInDatabase(data.AssemblyName, data.Plugin.Name);
+                        await UpdateAssemblyInfoInDatabase(data.AssemblyName, plugin.Name);
                         break;
                     case AssemblyDatabaseStatus.OK:
                         break;
                 }
 
-                data.Plugin.Config = new Config(path, false, data.Plugin.Name, data.AssemblyName, "_config", logger: logger);
-                data.Plugin.Config.version = assemblyVersion;
-                var loadedConfig = data.Plugin.Config.LoadXml(data.AssemblyName);
+                plugin.Config = new Config(path, false, plugin.Name, data.AssemblyName, "_config", logger: Logger);
+                plugin.Config.version = assemblyVersion;
+                var loadedConfig = plugin.Config.LoadXml(data.AssemblyName);
 
                 if (loadedConfig != null)
                 {
-                    data.Plugin.Config = loadedConfig;
-                    if (!VerifyPluginVersion(data.Plugin.Config.version, assemblyVersion))
+                    plugin.Config = loadedConfig;
+                    if (!VerifyPluginVersion(plugin.Config.version, assemblyVersion))
                     {
-                        logger.Log("Plugin Manager", $"{data.Plugin.Name} version mismatch, updating config file.", LogLevel.Info);
-                        data.Plugin.Config.GlobalCommandCreated = false;
-                        data.Plugin.Config.version = assemblyVersion;
+                        Logger.Log("Plugin Manager", $"{plugin.Name} version mismatch, updating config file.", LogLevel.Info);
+                        plugin.Config.GlobalCommandCreated = false;
+                        plugin.Config.version = assemblyVersion;
                     }
                 }
                 else
-                    data.Plugin.Config.SaveToXml(data.AssemblyName);
-                if (!data.Plugin.Config.GlobalCommandCreated)
+                    plugin.Config.SaveToXml(data.AssemblyName);
+                if (!plugin.Config.GlobalCommandCreated)
                 {
-                    foreach (SlashCommandBuilder slashCommandBuilder in data.Plugin.slashCommandBuilder)
+                    foreach (SlashCommandBuilder slashCommandBuilder in plugin.slashCommandBuilder)
                     {
                         if (slashCommandBuilder == null) 
                             continue;
 
-                        await SaveCommandInfoToDatabase(slashCommandBuilder.Name, data.Plugin.Name, data.AssemblyName);
+                        await SaveCommandInfoToDatabase(slashCommandBuilder.Name, plugin.Name, data.AssemblyName);
                     }
                 }
 
-                plugins.Add(data.Plugin);
+                await Plugins.Register(plugin);
 
-                logger.Log("Plugin Manager", "Loaded Plugin: " + data.Plugin.Name + ", version: " + data.Plugin.Config.version, LogLevel.Info);
+                Logger.Log("Plugin Manager", "Loaded Plugin: " + plugin.Name + ", version: " + plugin.Config.version, LogLevel.Info);
             }
-            return plugins;
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -136,7 +141,6 @@ namespace DiscordBot.Managers
         /// <returns>Predefined plugin name or assembly.dll name</returns>
         private async Task<AssemblyDatabaseStatus> CheckPluginName(string pluginName, string assemblyName)
         {
-            Database db = new Database();
             string query = "SELECT assembly_name,plugin_name FROM plugin_properties WHERE assembly_name = @AssemblyName";
 
             if (string.IsNullOrEmpty(pluginName)) return AssemblyDatabaseStatus.NOT_EXISTS;
@@ -146,7 +150,7 @@ namespace DiscordBot.Managers
                 new KeyValuePair<string, string>("@AssemblyName",assemblyName)
             };
 
-            var assemblyData = await db.SelectQueryAsync(query,parameters);
+            var assemblyData = await Database.SelectQueryAsync(query,parameters);
 
             if (assemblyData == null || assemblyData.Count == 0) return AssemblyDatabaseStatus.NOT_EXISTS;
             if (assemblyData.Contains(pluginName)) return AssemblyDatabaseStatus.OK;
@@ -154,7 +158,8 @@ namespace DiscordBot.Managers
         }
         public async Task FeedPluginWithGuilds(List<SocketGuild> guilds)
         {
-            foreach(ICommand plugin in Plugins)
+            List<IPlugin> plugins = Plugins.Get<IPlugin>();
+            foreach(IPlugin plugin in plugins)
             {
                 plugin.guilds = guilds;
             }
@@ -168,7 +173,6 @@ namespace DiscordBot.Managers
         /// <returns></returns>
         private async Task SaveAssemblyInfoToDatabase(string assemblyName, string pluginName, string pluginAlias = null)
         {
-            Database db = new Database();
             string query = "INSERT INTO plugin_properties (assembly_name,plugin_name,plugin_alias) VALUES (@AssemblyName,@PluginName,@PluginAlias)";
 
             if (pluginAlias == null) pluginAlias = string.Empty;
@@ -180,12 +184,11 @@ namespace DiscordBot.Managers
                 new KeyValuePair<string, string>("@PluginAlias",pluginAlias)
             };
 
-            var result = await db.InsertQueryAsync(query,parameters);
-            logger.Log("Plugin Manager",$"Saved info for {pluginName} to database: {(result == 0 ? "No" : "yes")}",LogLevel.Info);
+            var result = await Database.InsertQueryAsync(query,parameters);
+            Logger.Log("Plugin Manager",$"Saved info for {pluginName} to database: {(result == 0 ? "No" : "yes")}",LogLevel.Info);
         }
         private async Task SaveCommandInfoToDatabase(string commandName,string pluginName, string assemblyName)
         {
-            Database db = new Database();
             string query = "INSERT INTO command_info (command_name,plugin_name,assembly_name) VALUES (@CommandName,@PluginName,@AssemblyName)";
 
             List<KeyValuePair<string, string>> parameters = new List<KeyValuePair<string, string>>
@@ -195,11 +198,10 @@ namespace DiscordBot.Managers
                 new KeyValuePair<string, string>("@AssemblyName",assemblyName)
             };
 
-            var result = await db.InsertQueryAsync(query, parameters);
+            var result = await Database.InsertQueryAsync(query, parameters);
         }
         private async Task UpdateAssemblyInfoInDatabase(string assemblyName, string pluginName, string pluginAlias = null)
         {
-            Database db = new Database();
             string query = "UPDATE plugin_properties SET plugin_name = @PluginName WHERE assembly_name = @AssemblyName";
 
             List<KeyValuePair<string, string>> parameters = new List<KeyValuePair<string, string>>
@@ -209,7 +211,7 @@ namespace DiscordBot.Managers
                 new KeyValuePair<string, string>("@PluginAlias",pluginAlias)
             };
 
-            await db.UpdateQueryAsync(query, parameters);
+            await Database.UpdateQueryAsync(query, parameters);
         }
         /// <summary>
         /// Check if global command is claimed by other source.
@@ -220,8 +222,6 @@ namespace DiscordBot.Managers
         {
             if (string.IsNullOrEmpty(commandName))
                 return true;
-
-            Database database = new Database();
             string query = "SELECT plugin_name FROM command_info WHERE command_name = @CommandName";
 
             List<KeyValuePair<string,string>> parameters = new List<KeyValuePair<string, string>> 
@@ -229,7 +229,7 @@ namespace DiscordBot.Managers
                 new KeyValuePair<string, string>("@CommandName",commandName) 
             };
 
-            var data = await database.SelectQueryAsync(query, parameters);
+            var data = await Database.SelectQueryAsync(query, parameters);
 
             if (data == null || data.Count == 0) return false;
 

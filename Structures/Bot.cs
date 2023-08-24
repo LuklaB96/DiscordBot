@@ -14,6 +14,9 @@ using PluginTest.Enums;
 using PluginTest;
 using System.Runtime.CompilerServices;
 using System.Linq;
+using System.Threading.Channels;
+using static System.Collections.Specialized.BitVector32;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DiscordBot.Structures
 {
@@ -24,17 +27,18 @@ namespace DiscordBot.Structures
         private readonly List<ulong> guilds = new List<ulong>();
         private DiscordSocketClient _client;
         private TaskQueueManager TaskManager;
-        private IDatabase Database;
         private AssemblyManager assemblyManager;
-        private readonly ILogger Logger;
+        private readonly Logger Logger;
+        private Database Database;
+        private readonly IServiceProvider ServiceProvider;
 
         public Bot()
         {
             appConfig = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("config.json").Build();
-            Logger = new Logger();
-            assemblyManager = new AssemblyManager();
-            Database = new Database();
-
+            ServiceProvider = CreateServices();
+            Database = ServiceProvider.GetService<Database>();
+            Logger = ServiceProvider.GetService<Logger>();
+            assemblyManager = new AssemblyManager(ServiceProvider);
         }
         public async Task MainAsync(string[] args = null)
         {
@@ -43,28 +47,40 @@ namespace DiscordBot.Structures
             var token = appConfig["bot_token"];
             this.args = args;
 
-            var config = new DiscordSocketConfig
-            {
-                MessageCacheSize = 100,
-                AlwaysDownloadUsers = true,
-                GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.DirectMessages | GatewayIntents.MessageContent | GatewayIntents.GuildMessageReactions | GatewayIntents.GuildMembers | GatewayIntents.GuildVoiceStates
-            };
+            var config = ServiceProvider.GetService<DiscordSocketConfig>();
             
             _client = new DiscordSocketClient(config);
 
+            //bot
             _client.Log += Log;
-            _client.MessageReceived += MessageReceived;
             _client.Ready += Client_Ready;
-            _client.SlashCommandExecuted += SlashCommandHandler;
-            _client.ButtonExecuted += ButtonHandler;
+            _client.JoinedGuild += JoinedGuild;
+            //guilds
             _client.GuildAvailable += GuildAvailableEventHandler;
+            //components
+            _client.ButtonExecuted += ButtonHandler;
+            //commands
+            _client.SlashCommandExecuted += SlashCommandHandler;
+            _client.UserCommandExecuted += UserCommandExecuted;
+            _client.MessageCommandExecuted += MessageCommandExecuted;
+            //reactions
             _client.ReactionAdded += HandleReactionAdded;
             _client.ReactionRemoved += HandleReactionRemoved;
+            _client.ReactionsCleared += HandleReactionsCleared;
+            _client.ReactionsRemovedForEmote += HandleReactionsRemovedForEmote;
+            //users
             _client.UserJoined += UserJoined;
-            _client.JoinedGuild += JoinedGuild;
             _client.UserVoiceStateUpdated += OnUserVoiceStateUpdated;
+            //messages
             _client.MessageDeleted += MessageDeleted;
+            _client.MessageReceived += MessageReceived;
+            _client.MessageUpdated += MessageUpdated;
+            _client.MessagesBulkDeleted += MessageBulkDeleted;
+            //channels
             _client.ChannelDestroyed += ChannelDestroyed;
+            _client.ChannelCreated += ChannelCreated;
+            _client.ChannelUpdated += ChannelUpdated;
+
             await _client.SetGameAsync("Gram w gre");
             await _client.LoginAsync(TokenType.Bot, token);
             await _client.StartAsync();
@@ -73,6 +89,24 @@ namespace DiscordBot.Structures
             await Task.Delay(-1);
 
 
+        }
+        private IServiceProvider CreateServices()
+        {
+            var config = new DiscordSocketConfig
+            {
+                MessageCacheSize = 100,
+                AlwaysDownloadUsers = true,
+                GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.DirectMessages | GatewayIntents.MessageContent | GatewayIntents.GuildMessageReactions | GatewayIntents.GuildMembers | GatewayIntents.GuildVoiceStates
+            };
+
+            Database database = new Database();
+            Logger logger = new Logger();
+
+            var collection = new ServiceCollection()
+                .AddSingleton(config)
+                .AddSingleton(database)
+                .AddSingleton(logger);
+            return collection.BuildServiceProvider();
         }
         private async Task<List<SocketGuild>> GetAllGuilds()
         {
@@ -83,25 +117,65 @@ namespace DiscordBot.Structures
             }
             return socketGuilds;
         }
-        private async Task MessageDeleted(Cacheable<IMessage,ulong> message, Cacheable<IMessageChannel,ulong> channel)
-        {
-            var msg = await message.GetOrDownloadAsync();
-            
-            Console.WriteLine($"Message deleted: {msg.Author}");
-        }
+        
         private async Task OnUserVoiceStateUpdated(SocketUser user, SocketVoiceState oldState, SocketVoiceState newState)
         {
-            foreach(var data in assemblyManager.Plugins)
+            List<IPlugin> plugins = assemblyManager.Plugins.Get<IPlugin>();
+            foreach (var data in plugins)
             {
                 await data.OnUserVoiceStateUpdated(user, oldState, newState);
             }
             
         }
+        private async Task ChannelCreated(SocketChannel channel)
+        {
+            List<IPluginChannels> plugins = assemblyManager.Plugins.Get<IPluginChannels>();
+            foreach (var data in plugins)
+            {
+                try
+                {
+                    await data.ChannelCreated(channel);
+                }
+                catch (Exception ex)
+                {
+                    if(ex is NotImplementedException) { }
+                    else
+                        Logger.Log("BOT", $"Error in: {data.Name}, message: {ex.Message}", LogLevel.Error);
+                }
+            }
+        }
+        private async Task ChannelUpdated(SocketChannel channelOld, SocketChannel channelNew)
+        {
+            List<IPluginChannels> plugins = assemblyManager.Plugins.Get<IPluginChannels>();
+            foreach (var data in plugins)
+            {
+                try
+                {
+                    await data.ChannelUpdated(channelOld, channelNew);
+                }
+                catch (Exception ex)
+                {
+                    if (ex is NotImplementedException) { }
+                    else
+                        Logger.Log("BOT", $"Error in: {data.Name}, message: {ex.Message}", LogLevel.Error);
+                }
+            }
+        }
         private async Task ChannelDestroyed(SocketChannel channel)
         {
-            foreach (var data in assemblyManager.Plugins)
+            List<IPluginChannels> plugins = assemblyManager.Plugins.Get<IPluginChannels>();
+            foreach (var data in plugins)
             {
-                await data.ChannelDestroyed(channel);
+                try
+                {
+                    await data.ChannelDestroyed(channel);
+                }
+                catch (Exception ex)
+                {
+                    if (ex is NotImplementedException) { }
+                    else
+                        Logger.Log("BOT", $"Error in: {data.Name}, message: {ex.Message}", LogLevel.Error);
+                }
             }
         }
         private async Task JoinedGuild(SocketGuild guild)
@@ -110,7 +184,8 @@ namespace DiscordBot.Structures
         }
         private async Task SlashCommandHandler(SocketSlashCommand command)
         {
-            CommandHandler cmdHandler = new CommandHandler(Logger, Database, assemblyManager);
+            
+            CommandHandler cmdHandler = new CommandHandler(ServiceProvider, assemblyManager);
             await cmdHandler.Handle(command);
         }
         private async Task GuildAvailableEventHandler(SocketGuild guild)
@@ -119,7 +194,8 @@ namespace DiscordBot.Structures
         }
         private async Task UserJoined(SocketGuildUser user)
         {
-            foreach(ICommand plugin in assemblyManager.Plugins)
+            List<IPlugin> plugins = assemblyManager.Plugins.Get<IPlugin>();
+            foreach (IPlugin plugin in plugins)
             {
                 try
                 {
@@ -140,8 +216,8 @@ namespace DiscordBot.Structures
                 {
                     if (arg == "-gcbuild") { gcbuild = true; }
                 }
-        
-            foreach (ICommand plugin in assemblyManager.Plugins)
+            List<IPlugin> plugins = assemblyManager.Plugins.Get<IPlugin>();
+            foreach (IPlugin plugin in plugins)
             { 
                 if (plugin.Config.GlobalCommandCreated && !gcbuild) continue;
                 try
@@ -173,31 +249,40 @@ namespace DiscordBot.Structures
                 }
             }
 
-            TaskManager = new TaskQueueManager(_client, assemblyManager, 1);
+            TaskManager = new TaskQueueManager(_client, assemblyManager, ServiceProvider, 1);
             TaskManager.Start(AutoReset: true);
 
             List<SocketGuild> socketGuilds = await GetAllGuilds();
             await assemblyManager.FeedPluginWithGuilds(socketGuilds);
 
-            foreach(ICommand plugin in assemblyManager.Plugins)
+            foreach (IPlugin plugin in plugins)
             {
                 await plugin.ClientReady();
             }
         }
-
-        private async Task HandleReactionAdded(Cacheable<IUserMessage, ulong> cache, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+        private async Task HandleReactionsRemovedForEmote(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, IEmote emote)
         {
-            ReactionHandler rh = new ReactionHandler(Logger, Database, assemblyManager);
-            await rh.Handle(cache, channel, reaction, ReactionType.Added);
+            ReactionHandler rh = new ReactionHandler(ServiceProvider, assemblyManager);
+            await rh.Handle(message, channel, ReactionType.RemovedForEmotes, emote: emote);
         }
-        private async Task HandleReactionRemoved(Cacheable<IUserMessage, ulong> cache, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+        private async Task HandleReactionsCleared(Cacheable<IUserMessage,ulong> message, Cacheable<IMessageChannel,ulong> channel)
         {
-            ReactionHandler rh = new ReactionHandler(Logger, Database, assemblyManager);
-            await rh.Handle(cache, channel, reaction, ReactionType.Removed);
+            ReactionHandler rh = new ReactionHandler(ServiceProvider, assemblyManager);
+            await rh.Handle(message, channel, ReactionType.Cleared);
+        }
+        private async Task HandleReactionAdded(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+        {
+            ReactionHandler rh = new ReactionHandler(ServiceProvider, assemblyManager);
+            await rh.Handle(message, channel, ReactionType.Added, reaction);
+        }
+        private async Task HandleReactionRemoved(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+        {
+            ReactionHandler rh = new ReactionHandler(ServiceProvider, assemblyManager);
+            await rh.Handle(message, channel, ReactionType.Removed, reaction);
         }
         private async Task ButtonHandler(SocketMessageComponent component)
         {
-            ComponentHandler componentHandler = new ComponentHandler(Logger, Database, assemblyManager);
+            ComponentHandler componentHandler = new ComponentHandler(ServiceProvider, assemblyManager);
             await componentHandler.Handle(component);
         }
         private async Task setupGuildSettings(SocketGuild guild)
@@ -224,8 +309,79 @@ namespace DiscordBot.Structures
 
         private async Task MessageReceived(SocketMessage message)
         {
-            CommandHandler cmdHandler = new CommandHandler(Logger, Database, assemblyManager);
-            await cmdHandler.Handle(message,appConfig);
+            List<IPluginMessages> plugins = assemblyManager.Plugins.Get<IPluginMessages>();
+            foreach (var data in plugins)
+            {
+                try
+                {
+                    await data.MessageReceived(message);
+                }
+                catch (Exception ex)
+                {
+                    if (ex is NotImplementedException) { }
+                    else
+                        Logger.Log("BOT", $"Error in: {data.Name}, message: {ex.Message}", LogLevel.Error);
+                }
+            }
+        }
+        private async Task MessageDeleted(Cacheable<IMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
+        {
+            List<IPluginMessages> plugins = assemblyManager.Plugins.Get<IPluginMessages>();
+            foreach (var data in plugins)
+            {
+                try
+                {
+                    await data.MessageDeleted(message,channel);
+                }
+                catch (Exception ex)
+                {
+                    if (ex is NotImplementedException) { }
+                    else
+                        Logger.Log("BOT", $"Error in: {data.Name}, message: {ex.Message}", LogLevel.Error);
+                }
+            }
+        }
+        private async Task MessageUpdated(Cacheable<IMessage, ulong> messageOld, SocketMessage messageNew, ISocketMessageChannel channel)
+        {
+            List<IPluginMessages> plugins = assemblyManager.Plugins.Get<IPluginMessages>();
+            foreach (var data in plugins)
+            {
+                try
+                {
+                    await data.MessageUpdated(messageOld,messageNew,channel);
+                }
+                catch (Exception ex)
+                {
+                    if (ex is NotImplementedException) { }
+                    else
+                        Logger.Log("BOT", $"Error in: {data.Name}, message: {ex.Message}", LogLevel.Error);
+                }
+            }
+        }
+        private async Task MessageBulkDeleted(IReadOnlyCollection<Cacheable<IMessage, ulong>> messages, Cacheable<IMessageChannel, ulong> channel)
+        {
+            List<IPluginMessages> plugins = assemblyManager.Plugins.Get<IPluginMessages>();
+            foreach (var data in plugins)
+            {
+                try
+                {
+                    await data.MessageBulkDeleted(messages,channel);
+                }
+                catch (Exception ex)
+                {
+                    if (ex is NotImplementedException) { }
+                    else
+                        Logger.Log("BOT", $"Error in: {data.Name}, message: {ex.Message}", LogLevel.Error);
+                }
+            }
+        }
+        private async Task UserCommandExecuted(SocketUserCommand command)
+        {
+
+        }
+        private async Task MessageCommandExecuted(SocketMessageCommand command)
+        {
+
         }
 
         private Task Log(LogMessage msg)

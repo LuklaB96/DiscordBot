@@ -1,4 +1,5 @@
 ﻿using DiscordBot.Utility;
+using Microsoft.Extensions.DependencyInjection;
 using PluginTest.Enums;
 using PluginTest.Interfaces;
 using System;
@@ -15,11 +16,11 @@ namespace DiscordBot.AssemblyHelpers
         private const string FileType = "*.dll";
         private List<AssemblyData> assemblyData { get; set; }
         private Logger Logger;
-        public AssemblyLoader(string path)
+        public AssemblyLoader(string path,IServiceProvider serviceProvider)
         {
             FilePath = path;
             assemblyData = new List<AssemblyData>();
-            Logger = new Logger();
+            Logger = serviceProvider.GetService<Logger>();
         }
 
         public void Load()
@@ -41,16 +42,17 @@ namespace DiscordBot.AssemblyHelpers
                 {
                     foreach (Type type in assembly.GetTypes())
                     {
-                        if (!typeof(ICommand).IsAssignableFrom(type))
-                            continue;
-                        ICommand plugin = (ICommand)Activator.CreateInstance(type);
+                        if (typeof(IPlugin).IsAssignableFrom(type))
+                        {
+                            IPlugin plugin = (IPlugin)Activator.CreateInstance(type);
 
-                        string AssemblyFileName = Path.GetFileNameWithoutExtension(file);
-                        string AssemblyVersion = assembly.GetName().Version.ToString();
+                            string AssemblyFileName = Path.GetFileNameWithoutExtension(file);
+                            string AssemblyVersion = assembly.GetName().Version.ToString();
 
-                        data = new AssemblyData(AssemblyVersion, AssemblyFileName, plugin);
+                            data = new AssemblyData(AssemblyVersion, AssemblyFileName, plugin);
 
-                        assemblyData.Add(data);
+                            assemblyData.Add(data);
+                        }
                     }
                 }catch(Exception ex)
                 {

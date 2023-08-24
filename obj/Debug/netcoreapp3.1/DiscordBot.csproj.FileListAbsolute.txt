@@ -108,3 +108,5 @@ C:\Users\Łukasz\source\repos\DiscordBot\DiscordBot\bin\Debug\netcoreapp3.1\Open
 C:\Users\Łukasz\source\repos\DiscordBot\DiscordBot\bin\Debug\netcoreapp3.1\PluginTest.xml
 C:\Users\Łukasz\source\repos\DiscordBot\DiscordBot\bin\Debug\netcoreapp3.1\PluginTest.dll
 C:\Users\Łukasz\source\repos\DiscordBot\DiscordBot\bin\Debug\netcoreapp3.1\PluginTest.pdb
+C:\Users\Łukasz\source\repos\DiscordBot\DiscordBot\bin\Debug\netcoreapp3.1\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\Łukasz\source\repos\DiscordBot\DiscordBot\bin\Debug\netcoreapp3.1\Microsoft.Extensions.DependencyInjection.Abstractions.dll

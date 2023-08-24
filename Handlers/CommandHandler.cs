@@ -13,29 +13,71 @@ using PluginTest.Interfaces;
 using PluginTest.Enums;
 using Discord.Rest;
 using DiscordBot.Utility;
+using System.Reflection;
 
 namespace DiscordBot.Handlers
 {
+    public enum CommandSource
+    {
+        slash,
+        message,
+        user,
+        none
+    }
     internal class CommandHandler : UtilityBase
     {
-        public CommandHandler(ILogger logger, IDatabase database, AssemblyManager assemblyManager) : base (logger, database, assemblyManager) { }
-        public async Task Handle(SocketSlashCommand command)
+        public CommandHandler(IServiceProvider serviceProvider, AssemblyManager assemblyManager) : base(serviceProvider, assemblyManager) { }
+        public async Task Handle(SocketSlashCommand slashCommand = null, SocketMessageCommand messageCommand = null, SocketUserCommand userCommand = null)
         {
             _ = Task.Run(async () =>
             {
-                string pluginName = await CheckPluginCommand(command.Data.Name.ToLower());
-                foreach (ICommand plugin in assemblyManager.Plugins)
+                string pluginName = "";
+                if (slashCommand != null)
                 {
-                    if (plugin.Name.ToLower() != pluginName.ToLower())
+                    pluginName = await CheckPluginCommand(slashCommand.Data.Name.ToLower());
+                }
+                if (messageCommand != null)
+                {
+                    pluginName = await CheckPluginCommand(messageCommand.Data.Name.ToLower());
+                }
+                if (userCommand != null)
+                {
+                    pluginName = await CheckPluginCommand(userCommand.Data.Name.ToLower());
+                }
+                List<IPluginCommands> plugins = assemblyManager.Plugins.Get<IPluginCommands>();
+                foreach (IPluginCommands plugin in plugins)
+                {
+                    IPlugin p = plugin as IPlugin;
+                    if (p.Name.ToLower() != pluginName.ToLower())
                     {
                         continue;
                     }
 
-                    object msg = await plugin.ExecuteSlashCommand(command);
+                    object msg = null;
+
+                    CommandSource source = CommandSource.none;
+                    if (slashCommand != null) source = CommandSource.slash;
+                    if (messageCommand != null) source = CommandSource.message;
+                    if (userCommand != null) source = CommandSource.user;
+                    switch (source)
+                    {
+                        case CommandSource.slash:
+                            msg = plugin.ExecuteSlashCommand(slashCommand);
+                            break;
+                        case CommandSource.message:
+                            msg = plugin.MessageCommandExecuted(messageCommand);
+                            break;
+                        case CommandSource.user:
+                            msg = plugin.UserCommandExecuted(userCommand);
+                            break;
+                        default:
+                            break;
+                    }
 
                     if (msg == null)
                     {
                         break;
+
                     }
 
                     switch (msg.GetType().Name)
@@ -52,7 +94,7 @@ namespace DiscordBot.Handlers
                         default:
                             continue;
                     }
-                    
+
                 }
             });
         }
@@ -79,14 +121,13 @@ namespace DiscordBot.Handlers
         }
         private async Task<string> CheckPluginCommand(string commandName)
         {
-            Database db = new Database();
             string query = "SELECT plugin_name FROM command_info WHERE command_name = @CommandName";
 
             List<KeyValuePair<string, string>> parameters = new List<KeyValuePair<string, string>>
             {
                 new KeyValuePair<string, string>("@CommandName",commandName)
             };
-            var items = await db.SelectQueryAsync(query, parameters);
+            var items = await Database.SelectQueryAsync(query, parameters);
             if (items.Count == 0) return string.Empty;
             return items[0];
         }

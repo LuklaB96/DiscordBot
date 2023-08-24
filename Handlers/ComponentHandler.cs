@@ -5,18 +5,20 @@ using System.Threading.Tasks;
 using PluginTest.Interfaces;
 using DiscordBot.Utility;
 using PluginTest.Enums;
+using System.Collections.Generic;
 
 namespace DiscordBot.Handlers
 {
     internal class ComponentHandler : UtilityBase
     {
-        public ComponentHandler(ILogger logger, IDatabase database, AssemblyManager assemblyManager) : base(logger, database, assemblyManager) { }
+        public ComponentHandler(IServiceProvider serviceProvider, AssemblyManager assemblyManager) : base(serviceProvider, assemblyManager) { }
         public async Task Handle(SocketMessageComponent component)
         {
             _ = Task.Run(async () =>
             {
                 string[] componentData = component.Data.CustomId.Split('_');
-                foreach (ICommand plugin in assemblyManager.Plugins)
+                List<IPlugin> plugins = assemblyManager.Plugins.Get<IPlugin>();
+                foreach (IPlugin plugin in plugins)
                 {
                     if (plugin.Config.pluginName.ToLower() != componentData[0].ToLower())
                         continue;

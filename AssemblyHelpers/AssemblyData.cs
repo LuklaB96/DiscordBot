@@ -6,9 +6,9 @@ namespace DiscordBot.AssemblyHelpers
     {
         public readonly string AssemblyVersion;
         public readonly string AssemblyName;
-        public readonly ICommand Plugin;
+        public readonly object Plugin;
 
-        public AssemblyData(string assemblyVersion,string assemblyName, ICommand plugin) 
+        public AssemblyData(string assemblyVersion,string assemblyName, object plugin) 
         {
             AssemblyVersion = assemblyVersion;
             AssemblyName = assemblyName;

@@ -11,7 +11,7 @@ namespace DiscordBot.Handlers
 {
     public class MessageHandler : UtilityBase
     {
-        public MessageHandler(ILogger logger, IDatabase database, AssemblyManager assemblyManager) : base(logger, database, assemblyManager) { }
+        public MessageHandler(IServiceProvider serviceProvider, AssemblyManager assemblyManager) : base(serviceProvider, assemblyManager) { }
 
         public async Task HandleMessageDelete(Cacheable<IMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
         {

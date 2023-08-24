@@ -4,6 +4,7 @@ using DiscordBot.Managers;
 using DiscordBot.Structures;
 using DiscordBot.Utility;
 using PluginTest.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -12,7 +13,9 @@ namespace DiscordBot.Handlers
     public enum ReactionType
     {
         Added,
-        Removed
+        Removed,
+        Cleared,
+        RemovedForEmotes
     }
     public enum ReactionSource
     {
@@ -22,8 +25,8 @@ namespace DiscordBot.Handlers
     }
     internal class ReactionHandler : UtilityBase
     {
-        public ReactionHandler(ILogger logger, IDatabase database, AssemblyManager assemblyManager) : base(logger, database, assemblyManager) { }
-        public async Task Handle(Cacheable<IUserMessage, ulong> cache, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction, ReactionType type)
+        public ReactionHandler(IServiceProvider serviceProvider, AssemblyManager assemblyManager) : base(serviceProvider, assemblyManager) { }
+        public async Task Handle(Cacheable<IUserMessage, ulong> cache, Cacheable<IMessageChannel, ulong> channel, ReactionType type, SocketReaction reaction = null, IEmote emote = null)
         {
             _ = Task.Run(async () =>
             {
@@ -40,7 +43,8 @@ namespace DiscordBot.Handlers
                 };
 
                 var pluginName = await Database.SelectQueryAsync(query,parameters);
-                foreach(ICommand plugin in assemblyManager.Plugins)
+                List<IPluginReactions> plugins = assemblyManager.Plugins.Get<IPluginReactions>();
+                foreach (IPluginReactions plugin in plugins)
                 {
                     if(plugin.Config.pluginName.ToLower() == pluginName[0].ToLower())
                     {
@@ -51,6 +55,8 @@ namespace DiscordBot.Handlers
                                 break;
                             case ReactionType.Removed:
                                 await plugin.ReactionRemoved(message, channel, reaction);
+                                break;
+                            case ReactionType.Cleared:
                                 break;
                         }
                         break;

@@ -3,12 +3,14 @@ using Discord.Net;
 using Discord.WebSocket;
 using DiscordBot.Structures;
 using DiscordBot.Utility;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualBasic;
 using PluginTest.Enums;
 using PluginTest.Interfaces;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -19,18 +21,20 @@ namespace DiscordBot.Managers
 {
     internal class TaskQueueManager
     {
-        static Database db = new Database();
-        DiscordSocketClient _client;
-        private System.Timers.Timer _timer;
+        DiscordSocketClient _client { get; set; }
+        private System.Timers.Timer _timer { get; set; }
         ConcurrentQueue<Func<Task>> actionQueue = new ConcurrentQueue<Func<Task>>();
-        AssemblyManager assemblyManager;
-        ILogger Logger = new Logger();
+        AssemblyManager assemblyManager { get; set; }
+        Logger Logger { get; set; }
+        Database Database { get; set; }
 
-        public TaskQueueManager(DiscordSocketClient client, AssemblyManager assemblyManager, double seconds = 1)
+        public TaskQueueManager(DiscordSocketClient client, AssemblyManager assemblyManager, IServiceProvider serviceProvider, double seconds = 1)
         {
             _client = client;
             _timer = new System.Timers.Timer(seconds * 1000);
             this.assemblyManager = assemblyManager;
+            Logger = serviceProvider.GetService<Logger>();
+            Database = serviceProvider.GetService<Database>();
         }
 
         // Start the timer
@@ -55,7 +59,7 @@ namespace DiscordBot.Managers
                     }
                 }
             });
-            Console.WriteLine("Starting action dequeue thread...");
+            Logger.Log("TaskQueueManager", "Action enqueue/dequeue thread started!", LogLevel.Info);
             dequeueThread.Start();
         }
 
@@ -67,7 +71,7 @@ namespace DiscordBot.Managers
         private async Task ExecutePluginUpdate()
         {
             const string selectQuery = "SELECT guild_id FROM guildsettings";
-            var result = await db.SelectQueryAsync(selectQuery);
+            var result = await Database.SelectQueryAsync(selectQuery);
 
             while (result.Count > 0)
             {
@@ -79,7 +83,8 @@ namespace DiscordBot.Managers
                 SocketGuild guild = _client?.GetGuild(currentGuildId);
                 if (guild == null) continue;
 
-                foreach (ICommand plugin in assemblyManager.Plugins)
+                List<IPlugin> plugins = assemblyManager.Plugins.Get<IPlugin>();
+                foreach (IPlugin plugin in plugins)
                 {
                     try
                     {
