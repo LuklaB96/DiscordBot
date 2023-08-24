@@ -12,6 +12,8 @@ using DiscordBot.Utility;
 using PluginTest.Interfaces;
 using PluginTest.Enums;
 using PluginTest;
+using System.Runtime.CompilerServices;
+using System.Linq;
 
 namespace DiscordBot.Structures
 {
@@ -36,21 +38,16 @@ namespace DiscordBot.Structures
         }
         public async Task MainAsync(string[] args = null)
         {
-            
             await Database.Initalize();
             await assemblyManager.Initalize();
             var token = appConfig["bot_token"];
             this.args = args;
 
-            var guild = _client?.GetGuild(0);
-
-
-            //await Giveaway.UpdateList();
-
             var config = new DiscordSocketConfig
             {
+                MessageCacheSize = 100,
                 AlwaysDownloadUsers = true,
-                GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.DirectMessages | GatewayIntents.MessageContent | GatewayIntents.GuildMessageReactions | GatewayIntents.GuildMembers
+                GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.DirectMessages | GatewayIntents.MessageContent | GatewayIntents.GuildMessageReactions | GatewayIntents.GuildMembers | GatewayIntents.GuildVoiceStates
             };
             
             _client = new DiscordSocketClient(config);
@@ -65,7 +62,9 @@ namespace DiscordBot.Structures
             _client.ReactionRemoved += HandleReactionRemoved;
             _client.UserJoined += UserJoined;
             _client.JoinedGuild += JoinedGuild;
-
+            _client.UserVoiceStateUpdated += OnUserVoiceStateUpdated;
+            _client.MessageDeleted += MessageDeleted;
+            _client.ChannelDestroyed += ChannelDestroyed;
             await _client.SetGameAsync("Gram w gre");
             await _client.LoginAsync(TokenType.Bot, token);
             await _client.StartAsync();
@@ -74,6 +73,36 @@ namespace DiscordBot.Structures
             await Task.Delay(-1);
 
 
+        }
+        private async Task<List<SocketGuild>> GetAllGuilds()
+        {
+            List<SocketGuild> socketGuilds = new List<SocketGuild>();
+            foreach(ulong id in guilds)
+            {
+                socketGuilds.Add(_client.GetGuild(id));
+            }
+            return socketGuilds;
+        }
+        private async Task MessageDeleted(Cacheable<IMessage,ulong> message, Cacheable<IMessageChannel,ulong> channel)
+        {
+            var msg = await message.GetOrDownloadAsync();
+            
+            Console.WriteLine($"Message deleted: {msg.Author}");
+        }
+        private async Task OnUserVoiceStateUpdated(SocketUser user, SocketVoiceState oldState, SocketVoiceState newState)
+        {
+            foreach(var data in assemblyManager.Plugins)
+            {
+                await data.OnUserVoiceStateUpdated(user, oldState, newState);
+            }
+            
+        }
+        private async Task ChannelDestroyed(SocketChannel channel)
+        {
+            foreach (var data in assemblyManager.Plugins)
+            {
+                await data.ChannelDestroyed(channel);
+            }
         }
         private async Task JoinedGuild(SocketGuild guild)
         {
@@ -146,6 +175,14 @@ namespace DiscordBot.Structures
 
             TaskManager = new TaskQueueManager(_client, assemblyManager, 1);
             TaskManager.Start(AutoReset: true);
+
+            List<SocketGuild> socketGuilds = await GetAllGuilds();
+            await assemblyManager.FeedPluginWithGuilds(socketGuilds);
+
+            foreach(ICommand plugin in assemblyManager.Plugins)
+            {
+                await plugin.ClientReady();
+            }
         }
 
         private async Task HandleReactionAdded(Cacheable<IUserMessage, ulong> cache, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)

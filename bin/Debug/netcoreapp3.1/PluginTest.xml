@@ -27,11 +27,6 @@
             <param name="fileName"></param>
             <returns>returns <see cref="T:PluginTest.Config"/> class object or <see langword="null"/> if file does not exists.</returns>
         </member>
-        <member name="P:PluginTest.Interfaces.ICommand.DatabaseTableProperties">
-            <summary>
-            When the plugin is loaded, the database will check if the table exists, if not, it will create a new one according to the following scheme: pluginname_tablename.
-            </summary>
-        </member>
         <member name="M:PluginTest.Uuid.Create(System.String,System.String)">
             <summary>
             Generates a standardized uuid. 

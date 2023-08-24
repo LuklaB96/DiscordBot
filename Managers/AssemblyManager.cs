@@ -11,6 +11,7 @@ using DiscordBot.Enums;
 using PluginTest;
 using DiscordBot.AssemblyHelpers;
 using Discord;
+using Discord.WebSocket;
 
 namespace DiscordBot.Managers
 {
@@ -150,6 +151,13 @@ namespace DiscordBot.Managers
             if (assemblyData == null || assemblyData.Count == 0) return AssemblyDatabaseStatus.NOT_EXISTS;
             if (assemblyData.Contains(pluginName)) return AssemblyDatabaseStatus.OK;
             else return AssemblyDatabaseStatus.MISMATCH;
+        }
+        public async Task FeedPluginWithGuilds(List<SocketGuild> guilds)
+        {
+            foreach(ICommand plugin in Plugins)
+            {
+                plugin.guilds = guilds;
+            }
         }
         /// <summary>
         /// 
