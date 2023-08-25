@@ -11,16 +11,14 @@ using PluginTest.Interfaces;
 
 namespace DiscordBot.Plugins
 {
-    public enum PluginType
-    {
-        ICommand
-    }
     public class PluginRegistry
     {
         private List<IPlugin> PluginBase { get; set; }
         private List<IPluginChannels> PluginChannels { get; set; }
         private List<IPluginReactions> PluginReactions { get; set; }
         private List<IPluginCommands> PluginCommands { get; set; }
+        private List<IPluginMessages> PluginMessages { get; set; }
+        private List<IPluginComponents> PluginComponents { get; set; }
         Logger Logger { get; set; }
         public PluginRegistry(IServiceProvider serviceProvider) 
         { 
@@ -28,6 +26,8 @@ namespace DiscordBot.Plugins
             PluginChannels = new List<IPluginChannels>();
             PluginReactions = new List<IPluginReactions>();
             PluginCommands = new List<IPluginCommands>();
+            PluginMessages = new List<IPluginMessages>();
+            PluginComponents = new List<IPluginComponents>();
             Logger = serviceProvider.GetService<Logger>();
         }
 
@@ -53,6 +53,14 @@ namespace DiscordBot.Plugins
                 if(type == typeof(IPluginCommands))
                 {
                     PluginCommands.Add((IPluginCommands)plugin);
+                }
+                if (type == typeof(IPluginMessages))
+                {
+                    PluginMessages.Add((IPluginMessages)plugin);
+                }
+                if( type == typeof(IPluginComponents))
+                {
+                    PluginComponents.Add((IPluginComponents)plugin);
                 }
             }
             
@@ -91,6 +99,14 @@ namespace DiscordBot.Plugins
             if(typeof(T) == typeof(IPluginCommands))
             {
                 return PluginCommands.ConvertAll(plugin => (T)plugin);
+            }
+            if (typeof(T) == typeof(IPluginMessages))
+            {
+                return PluginMessages.ConvertAll(plugin => (T)plugin);
+            }
+            if(typeof(T) == typeof(IPluginComponents))
+            {
+                return PluginComponents.ConvertAll(plugin => (T)plugin);
             }
             return new List<T>();
         } 

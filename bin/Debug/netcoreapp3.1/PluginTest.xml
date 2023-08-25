@@ -4,7 +4,7 @@
         <name>PluginTest</name>
     </assembly>
     <members>
-        <member name="M:PluginTest.Config.#ctor(System.String,System.Boolean,System.String,System.String,System.String,PluginTest.Interfaces.ILogger)">
+        <member name="M:PluginTest.Config.#ctor(System.String,System.Boolean,System.Boolean,System.String,System.String,PluginTest.Interfaces.ILogger,System.String)">
             <summary>
             
             </summary>
@@ -12,7 +12,7 @@
             <param name="GlobalCommandCreated"></param>
             <param name="configNameSuffix"></param>
         </member>
-        <member name="M:PluginTest.Config.SaveToXml(System.String)">
+        <member name="M:PluginTest.Config.SaveToXml(System.String,PluginTest.Interfaces.ILogger)">
             <summary>
             Saves the file to .xml format, the argument is only <paramref name="fileName"/>, and the rest consists of the information provided in the <see cref="T:PluginTest.Config"/> class constructor. 
             The file is created according to the scheme: <paramref name="dirPath"/> + <paramref name="fileName"/> + <paramref name="configNameSuffix"/> + <paramref name="fileExtension"/>, where <paramref name="fileExtension"/> has a const value ".xml"

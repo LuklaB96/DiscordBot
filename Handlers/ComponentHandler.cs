@@ -17,8 +17,8 @@ namespace DiscordBot.Handlers
             _ = Task.Run(async () =>
             {
                 string[] componentData = component.Data.CustomId.Split('_');
-                List<IPlugin> plugins = assemblyManager.Plugins.Get<IPlugin>();
-                foreach (IPlugin plugin in plugins)
+                List<IPluginComponents> plugins = assemblyManager.Plugins.Get<IPluginComponents>();
+                foreach (IPluginComponents plugin in plugins)
                 {
                     if (plugin.Config.pluginName.ToLower() != componentData[0].ToLower())
                         continue;

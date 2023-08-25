@@ -3,7 +3,8 @@
   <version>1.0.0.0</version>
   <configNameSuffix>_config</configNameSuffix>
   <GlobalCommandCreated>true</GlobalCommandCreated>
+  <ModalsCreated>false</ModalsCreated>
   <dirPath>Plugins/</dirPath>
   <assemblyName>VoiceChannelCreator</assemblyName>
-  <pluginName>VoieChannelCreator</pluginName>
+  <pluginName>VoiceChannelCreator</pluginName>
 </Config>

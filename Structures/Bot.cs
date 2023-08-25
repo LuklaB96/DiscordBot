@@ -3,7 +3,6 @@ using Discord;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Discord.Net;
 using DiscordBot.Handlers;
 using DiscordBot.Managers;
 using Microsoft.Extensions.Configuration;
@@ -11,12 +10,9 @@ using System.IO;
 using DiscordBot.Utility;
 using PluginTest.Interfaces;
 using PluginTest.Enums;
-using PluginTest;
-using System.Runtime.CompilerServices;
-using System.Linq;
-using System.Threading.Channels;
-using static System.Collections.Specialized.BitVector32;
 using Microsoft.Extensions.DependencyInjection;
+using System.Linq;
+using PluginTest;
 
 namespace DiscordBot.Structures
 {
@@ -50,7 +46,6 @@ namespace DiscordBot.Structures
             var config = ServiceProvider.GetService<DiscordSocketConfig>();
             
             _client = new DiscordSocketClient(config);
-
             //bot
             _client.Log += Log;
             _client.Ready += Client_Ready;
@@ -58,7 +53,7 @@ namespace DiscordBot.Structures
             //guilds
             _client.GuildAvailable += GuildAvailableEventHandler;
             //components
-            _client.ButtonExecuted += ButtonHandler;
+            _client.ButtonExecuted += ComponentExecuted;
             //commands
             _client.SlashCommandExecuted += SlashCommandHandler;
             _client.UserCommandExecuted += UserCommandExecuted;
@@ -80,6 +75,8 @@ namespace DiscordBot.Structures
             _client.ChannelDestroyed += ChannelDestroyed;
             _client.ChannelCreated += ChannelCreated;
             _client.ChannelUpdated += ChannelUpdated;
+            //modals
+            _client.ModalSubmitted += ModalSubmitted;
 
             await _client.SetGameAsync("Gram w gre");
             await _client.LoginAsync(TokenType.Bot, token);
@@ -90,13 +87,24 @@ namespace DiscordBot.Structures
 
 
         }
+
+        private async Task<Task> ModalSubmitted(SocketModal modal)
+        {
+            AllowedMentions m = new AllowedMentions();
+            m.AllowedTypes = AllowedMentionTypes.Users;
+            await modal.RespondAsync($"test {modal.User.Mention}",allowedMentions: m);
+            List<SocketMessageComponentData> components = modal.Data.Components.ToList();
+            string v1 = components.First(x => x.CustomId == "test").Value;
+            return Task.CompletedTask;
+        }
         private IServiceProvider CreateServices()
         {
+
             var config = new DiscordSocketConfig
             {
                 MessageCacheSize = 100,
                 AlwaysDownloadUsers = true,
-                GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.DirectMessages | GatewayIntents.MessageContent | GatewayIntents.GuildMessageReactions | GatewayIntents.GuildMembers | GatewayIntents.GuildVoiceStates
+                GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.DirectMessages | GatewayIntents.MessageContent | GatewayIntents.GuildMessageReactions | GatewayIntents.GuildMembers | GatewayIntents.GuildVoiceStates | GatewayIntents.GuildPresences
             };
 
             Database database = new Database();
@@ -240,7 +248,7 @@ namespace DiscordBot.Structures
                     }
 
                     plugin.Config.GlobalCommandCreated = true;
-                    plugin.Config.SaveToXml(plugin.Config.assemblyName);
+                    plugin.Config.SaveToXml(plugin.Config.assemblyName,Logger);
 
                 }
                 catch (Exception ex)
@@ -248,12 +256,13 @@ namespace DiscordBot.Structures
                     Logger.Log(plugin.Config.pluginName, $"Failed to build global command: {ex.Message}", LogLevel.Error);
                 }
             }
-
-            TaskManager = new TaskQueueManager(_client, assemblyManager, ServiceProvider, 1);
-            TaskManager.Start(AutoReset: true);
-
             List<SocketGuild> socketGuilds = await GetAllGuilds();
             await assemblyManager.FeedPluginWithGuilds(socketGuilds);
+
+            TaskManager = new TaskQueueManager(_client, assemblyManager, ServiceProvider, 1);
+            await TaskManager.Start(AutoReset: true);
+
+            
 
             foreach (IPlugin plugin in plugins)
             {
@@ -280,7 +289,7 @@ namespace DiscordBot.Structures
             ReactionHandler rh = new ReactionHandler(ServiceProvider, assemblyManager);
             await rh.Handle(message, channel, ReactionType.Removed, reaction);
         }
-        private async Task ButtonHandler(SocketMessageComponent component)
+        private async Task ComponentExecuted(SocketMessageComponent component)
         {
             ComponentHandler componentHandler = new ComponentHandler(ServiceProvider, assemblyManager);
             await componentHandler.Handle(component);

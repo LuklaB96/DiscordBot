@@ -34,9 +34,10 @@ namespace DiscordBot.Structures
             using SQLiteConnection conn = new SQLiteConnection(connectionString);
             conn.Open();
 
-            await CreateTableAsync(conn,"plugin_properties","assembly_name TEXT PRIMARY KEY,plugin_name TEXT, plugin_alias TEXT");
+            await CreateTableAsync(conn, "plugin_properties", "assembly_name TEXT PRIMARY KEY,plugin_name TEXT, plugin_alias TEXT");
             await CreateTableAsync(conn, "guildsettings", "guild_id TEXT PRIMARY KEY, prefix TEXT");
             await CreateTableAsync(conn, "command_info", "command_name TEXT PRIMARY KEY, plugin_name TEXT, assembly_name TEXT");
+            await CreateTableAsync(conn, "modal_info", "modal_name TEXT PRIMARY KEY, plugin_name TEXT, assembly_name TEXT");
             await CreateTableAsync(conn, "message_info", "message_id TEXT PRIMARY KEY, plugin_name TEXT");
             
             conn.Close();

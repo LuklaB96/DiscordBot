@@ -31,7 +31,7 @@ namespace DiscordBot.Managers
             Logger = serviceProvider.GetService<Logger>();
             Database = serviceProvider.GetService<Database>();
             Plugins = new PluginRegistry(serviceProvider);
-            this.ServiceProvider = serviceProvider;
+            ServiceProvider = serviceProvider;
         }
         /// <summary>
         /// Loads all plugins to a List of ICommand objects for later use
@@ -85,13 +85,14 @@ namespace DiscordBot.Managers
                     case AssemblyDatabaseStatus.OK:
                         break;
                 }
-
-                plugin.Config = new Config(path, false, plugin.Name, data.AssemblyName, "_config", logger: Logger);
+                Config cfg = new Config(path, false, false, plugin.Name, data.AssemblyName, Logger, "_config");
+                plugin.Config = cfg;
                 plugin.Config.version = assemblyVersion;
                 var loadedConfig = plugin.Config.LoadXml(data.AssemblyName);
 
                 if (loadedConfig != null)
                 {
+                    Console.WriteLine(loadedConfig.pluginName);
                     plugin.Config = loadedConfig;
                     if (!VerifyPluginVersion(plugin.Config.version, assemblyVersion))
                     {
@@ -101,7 +102,7 @@ namespace DiscordBot.Managers
                     }
                 }
                 else
-                    plugin.Config.SaveToXml(data.AssemblyName);
+                    plugin.Config.SaveToXml(data.AssemblyName,Logger);
                 if (!plugin.Config.GlobalCommandCreated)
                 {
                     foreach (SlashCommandBuilder slashCommandBuilder in plugin.slashCommandBuilder)
@@ -110,6 +111,26 @@ namespace DiscordBot.Managers
                             continue;
 
                         await SaveCommandInfoToDatabase(slashCommandBuilder.Name, plugin.Name, data.AssemblyName);
+                    }
+                }
+                if (!plugin.Config.ModalsCreated)
+                {
+                    IPluginModals p = plugin as IPluginModals;
+                    try
+                    {
+                        foreach (ModalBuilder modalBuilder in p.ModalBuilders)
+                        {
+                            if (modalBuilder == null)
+                                continue;
+
+                            await SaveModalInfoToDatabase(modalBuilder.CustomId, plugin.Name, data.AssemblyName);
+                            plugin.Config.SaveToXml(data.AssemblyName, Logger);
+                            plugin.Config.ModalsCreated = true;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+
                     }
                 }
 
@@ -194,6 +215,19 @@ namespace DiscordBot.Managers
             List<KeyValuePair<string, string>> parameters = new List<KeyValuePair<string, string>>
             {
                 new KeyValuePair<string, string>("@CommandName",commandName),
+                new KeyValuePair<string, string>("@PluginName",pluginName),
+                new KeyValuePair<string, string>("@AssemblyName",assemblyName)
+            };
+
+            var result = await Database.InsertQueryAsync(query, parameters);
+        }
+        private async Task SaveModalInfoToDatabase(string modalName, string pluginName, string assemblyName)
+        {
+            string query = "INSERT INTO modal_info (modal_name,plugin_name,assembly_name) VALUES (@ModalName,@PluginName,@AssemblyName)";
+
+            List<KeyValuePair<string, string>> parameters = new List<KeyValuePair<string, string>>
+            {
+                new KeyValuePair<string, string>("@ModalName",modalName),
                 new KeyValuePair<string, string>("@PluginName",pluginName),
                 new KeyValuePair<string, string>("@AssemblyName",assemblyName)
             };

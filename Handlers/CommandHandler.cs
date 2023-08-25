@@ -47,8 +47,7 @@ namespace DiscordBot.Handlers
                 List<IPluginCommands> plugins = assemblyManager.Plugins.Get<IPluginCommands>();
                 foreach (IPluginCommands plugin in plugins)
                 {
-                    IPlugin p = plugin as IPlugin;
-                    if (p.Name.ToLower() != pluginName.ToLower())
+                    if (plugin.Name.ToLower() != pluginName.ToLower())
                     {
                         continue;
                     }
