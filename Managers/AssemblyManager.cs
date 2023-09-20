@@ -28,10 +28,10 @@ namespace DiscordBot.Managers
         public PluginRegistry Plugins { get; set; }
         public AssemblyManager(IServiceProvider serviceProvider)
         {
+            ServiceProvider = serviceProvider;
             Logger = serviceProvider.GetService<Logger>();
             Database = serviceProvider.GetService<Database>();
             Plugins = new PluginRegistry(serviceProvider);
-            ServiceProvider = serviceProvider;
         }
         /// <summary>
         /// Loads all plugins to a List of ICommand objects for later use

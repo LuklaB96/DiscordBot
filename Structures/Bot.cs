@@ -23,6 +23,7 @@ namespace DiscordBot.Structures
         private DiscordSocketClient _client;
         private TaskQueueManager TaskManager;
         private readonly AssemblyManager AssemblyManager;
+        private readonly BackupManager BackupManager;
         private readonly Logger Logger;
         private readonly Database Database;
         private readonly IServiceProvider ServiceProvider;
@@ -35,13 +36,27 @@ namespace DiscordBot.Structures
             Database = ServiceProvider.GetService<Database>();
             Logger = ServiceProvider.GetService<Logger>();
             AssemblyManager = new AssemblyManager(ServiceProvider);
+            BackupManager = new BackupManager(10,"backup",ServiceProvider);
         }
         public async Task MainAsync(string[] args = null)
         {
             await Database.Initalize();
             await AssemblyManager.Initalize();
+            await BackupManager.Initalize();
             var token = appConfig["bot_token"];
+            
             this.args = args;
+
+            int.TryParse(appConfig["BackupInterval"], out int BackupUpdateInterval);
+            if (BackupUpdateInterval > 0)
+            {
+                await BackupManager.Start(BackupUpdateInterval);
+            }else
+                await BackupManager.Start();
+
+            //register all files for backup
+            await BackupManager.RegisterBackupFile("bot.db");
+
 
             var config = ServiceProvider.GetService<DiscordSocketConfig>();
             
@@ -78,7 +93,10 @@ namespace DiscordBot.Structures
             //modals
             _client.ModalSubmitted += ModalSubmitted;
 
-            await _client.SetGameAsync("Gram w gre");
+
+            var BotActivityStatus = appConfig["BotActivityStatus"];
+
+            await _client.SetGameAsync(BotActivityStatus);
             await _client.LoginAsync(TokenType.Bot, token);
             await _client.StartAsync();
 
@@ -150,16 +168,6 @@ namespace DiscordBot.Structures
         }
         private async Task<Task> ChannelCreated(SocketChannel channel)
         {
-            _ = Task.Run(async() =>
-            {
-                while (true)
-                {
-                    IVoiceChannel ch = channel as IVoiceChannel;
-                    var audioClient = await ch.ConnectAsync();
-                    Console.WriteLine(audioClient.ConnectionState);
-                    await Task.Delay(1000);
-                }
-            });
             List<IPluginChannels> plugins = AssemblyManager.Plugins.Get<IPluginChannels>();
             foreach (var data in plugins)
             {
