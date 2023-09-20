@@ -19,7 +19,7 @@ namespace DiscordBot.Managers
 {
     public class AssemblyManager
     {
-        private const string path = "Plugins/";
+        private const string PATH = "Plugins/";
         private Logger Logger { get; set; }
         private Database Database { get; set; }
         private IServiceProvider ServiceProvider { get; set; }
@@ -38,10 +38,10 @@ namespace DiscordBot.Managers
         /// </summary>
         public async Task Initalize() 
         { 
-            await LoadAllPlugins(path);
+            await LoadAllPlugins(PATH);
         }
         /// <summary>
-        /// Loads all plugins from the specified <paramref name="path"/>. It checks if the plugin has plugin_config.xml and creates or loads it as needed.
+        /// Loads all plugins from the specified <paramref name="PATH"/>. It checks if the plugin has plugin_config.xml and creates or loads it as needed.
         /// </summary>
         /// <param name="path"></param>
         /// <returns>Returns <see cref="List{T}"/> containing all active <see cref="ICommand"/> plugins</returns>
@@ -168,7 +168,7 @@ namespace DiscordBot.Managers
             return false;
         }
         /// <summary>
-        /// 
+        /// Checks if assemblyName and pluginName param is equal to the one in database, if not, it returns the appropriate <see cref="AssemblyDatabaseStatus"/> enum type .
         /// </summary>
         /// <param name="pluginName"></param>
         /// <returns>Predefined plugin name or assembly.dll name</returns>
