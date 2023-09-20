@@ -14,12 +14,12 @@ namespace DiscordBot.AssemblyHelpers
     {
         private string FilePath;
         private const string FileType = "*.dll";
-        private List<AssemblyData> assemblyData { get; set; }
-        private Logger Logger;
+        private List<AssemblyData> AssemblyData { get; set; }
+        private readonly Logger Logger;
         public AssemblyLoader(string path,IServiceProvider serviceProvider)
         {
             FilePath = path;
-            assemblyData = new List<AssemblyData>();
+            AssemblyData = new List<AssemblyData>();
             Logger = serviceProvider.GetService<Logger>();
         }
 
@@ -51,7 +51,7 @@ namespace DiscordBot.AssemblyHelpers
 
                             data = new AssemblyData(AssemblyVersion, AssemblyFileName, plugin);
 
-                            assemblyData.Add(data);
+                            AssemblyData.Add(data);
                         }
                     }
                 }catch(Exception ex)
@@ -62,7 +62,7 @@ namespace DiscordBot.AssemblyHelpers
         }
         public IEnumerator<AssemblyData> GetEnumerator()
         {
-            foreach(AssemblyData data in assemblyData)
+            foreach(AssemblyData data in AssemblyData)
             {
                 if(data != null)
                     yield return data;
@@ -76,7 +76,7 @@ namespace DiscordBot.AssemblyHelpers
         public void Dispose()
         {
             FilePath = null;
-            assemblyData = null;
+            AssemblyData = null;
         }
     }
 }

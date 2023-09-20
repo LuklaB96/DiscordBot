@@ -68,10 +68,16 @@ namespace DiscordBot.Managers
 
                 string assemblyVersion = data.AssemblyVersion;
                 var pluginNameStatus = await CheckPluginName(plugin.Name, data.AssemblyName);
-
-                foreach (KeyValuePair<string, string> TableProperties in plugin.DatabaseTableProperties)
+                try
                 {
-                    await Database.CheckCreatePluginTable(plugin.Name, TableProperties.Key, TableProperties.Value);
+                    foreach (KeyValuePair<string, string> TableProperties in plugin.DatabaseTableProperties)
+                    {
+                        await Database.CheckCreatePluginTable(plugin.Name, TableProperties.Key, TableProperties.Value);
+                    }
+                }
+                catch(Exception ex)
+                {
+                    if (ex is NotImplementedException) { }
                 }
 
                 switch (pluginNameStatus)
@@ -92,7 +98,6 @@ namespace DiscordBot.Managers
 
                 if (loadedConfig != null)
                 {
-                    Console.WriteLine(loadedConfig.pluginName);
                     plugin.Config = loadedConfig;
                     if (!VerifyPluginVersion(plugin.Config.version, assemblyVersion))
                     {
@@ -105,12 +110,19 @@ namespace DiscordBot.Managers
                     plugin.Config.SaveToXml(data.AssemblyName,Logger);
                 if (!plugin.Config.GlobalCommandCreated)
                 {
-                    foreach (SlashCommandBuilder slashCommandBuilder in plugin.slashCommandBuilder)
+                    try
                     {
-                        if (slashCommandBuilder == null) 
-                            continue;
+                        foreach (SlashCommandBuilder slashCommandBuilder in plugin.slashCommandBuilder)
+                        {
+                            if (slashCommandBuilder == null)
+                                continue;
 
-                        await SaveCommandInfoToDatabase(slashCommandBuilder.Name, plugin.Name, data.AssemblyName);
+                            await SaveCommandInfoToDatabase(slashCommandBuilder.Name, plugin.Name, data.AssemblyName);
+                        }
+                    }
+                    catch(Exception ex)
+                    {
+                        if(ex is NullReferenceException || ex is NotImplementedException) { }
                     }
                 }
                 if (!plugin.Config.ModalsCreated)
@@ -177,12 +189,13 @@ namespace DiscordBot.Managers
             if (assemblyData.Contains(pluginName)) return AssemblyDatabaseStatus.OK;
             else return AssemblyDatabaseStatus.MISMATCH;
         }
-        public async Task FeedPluginWithGuilds(List<SocketGuild> guilds)
+        public async Task SetPluginsVariables(DiscordSocketClient client, List<SocketGuild> guilds)
         {
-            List<IPlugin> plugins = Plugins.Get<IPlugin>();
-            foreach(IPlugin plugin in plugins)
+            List<IPlugin> plugins = Plugins.GetAllBasePlugins();
+            foreach (IPlugin plugin in plugins)
             {
                 plugin.guilds = guilds;
+                plugin.Client = client;
             }
         }
         /// <summary>
@@ -196,7 +209,7 @@ namespace DiscordBot.Managers
         {
             string query = "INSERT INTO plugin_properties (assembly_name,plugin_name,plugin_alias) VALUES (@AssemblyName,@PluginName,@PluginAlias)";
 
-            if (pluginAlias == null) pluginAlias = string.Empty;
+            pluginAlias ??= string.Empty;
 
             List<KeyValuePair<string, string>> parameters = new List<KeyValuePair<string, string>>
             {
@@ -218,8 +231,7 @@ namespace DiscordBot.Managers
                 new KeyValuePair<string, string>("@PluginName",pluginName),
                 new KeyValuePair<string, string>("@AssemblyName",assemblyName)
             };
-
-            var result = await Database.InsertQueryAsync(query, parameters);
+            await Database.InsertQueryAsync(query, parameters);
         }
         private async Task SaveModalInfoToDatabase(string modalName, string pluginName, string assemblyName)
         {
@@ -232,7 +244,7 @@ namespace DiscordBot.Managers
                 new KeyValuePair<string, string>("@AssemblyName",assemblyName)
             };
 
-            var result = await Database.InsertQueryAsync(query, parameters);
+            await Database.InsertQueryAsync(query, parameters);
         }
         private async Task UpdateAssemblyInfoInDatabase(string assemblyName, string pluginName, string pluginAlias = null)
         {

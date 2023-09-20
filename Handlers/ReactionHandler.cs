@@ -43,7 +43,7 @@ namespace DiscordBot.Handlers
                 };
 
                 var pluginName = await Database.SelectQueryAsync(query,parameters);
-                List<IPluginReactions> plugins = assemblyManager.Plugins.Get<IPluginReactions>();
+                List<IPluginReactions> plugins = AssemblyManager.Plugins.Get<IPluginReactions>();
                 foreach (IPluginReactions plugin in plugins)
                 {
                     if(plugin.Config.pluginName.ToLower() == pluginName[0].ToLower())

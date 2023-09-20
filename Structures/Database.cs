@@ -230,7 +230,7 @@ namespace DiscordBot.Structures
         /// </summary>
         /// <param name="tableName"></param>
         /// <returns></returns>
-        public bool tableAlreadyExists(string tableName)
+        public bool TableAlreadyExists(string tableName)
         {
             string query = "SELECT name FROM sqlite_master WHERE type='table' AND name='" + tableName + "';";
             using SQLiteConnection conn = new SQLiteConnection(connectionString);

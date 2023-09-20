@@ -1,8 +1,0 @@
-{
-  "bot_token": "MTAyOTMyNjk2NDMyNDA1MzAzMw.Gy-Str.2CvJnr3WyGdCN4XK8RuSznHNurynKuNnr50kt8",
-  "weather_api_token": "52b9a6e36d334776b26103321230703",
-  "openai_api_token": "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",
-  "//weatherapi": "To get the token for weatherapi go to weatherapi.com, create an account and generate token in your dashboard.",
-  "//openaiapi": "wchodzimy na beta.openai.com i tworzymy konto bądź logujemy się na istniejące, następnie wchodzimy i Personal i View api keys gdzie generujemy klucz"
-}
-

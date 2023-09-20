@@ -22,9 +22,9 @@ namespace DiscordBot.Managers
     internal class TaskQueueManager
     {
         DiscordSocketClient _client { get; set; }
-        private System.Timers.Timer _timer { get; set; }
-        ConcurrentQueue<Func<Task>> actionQueue = new ConcurrentQueue<Func<Task>>();
-        AssemblyManager assemblyManager { get; set; }
+        System.Timers.Timer _timer { get; set; }
+        readonly ConcurrentQueue<Func<Task>> actionQueue = new ConcurrentQueue<Func<Task>>();
+        AssemblyManager AssemblyManager { get; set; }
         Logger Logger { get; set; }
         Database Database { get; set; }
 
@@ -32,7 +32,7 @@ namespace DiscordBot.Managers
         {
             _client = client;
             _timer = new System.Timers.Timer(seconds * 1000);
-            this.assemblyManager = assemblyManager;
+            this.AssemblyManager = assemblyManager;
             Logger = serviceProvider.GetService<Logger>();
             Database = serviceProvider.GetService<Database>();
         }
@@ -41,7 +41,7 @@ namespace DiscordBot.Managers
         public async Task Start(bool AutoReset = false)
         {
             _timer.Elapsed += OnTimedEvent;
-            _timer.AutoReset = true;
+            _timer.AutoReset = AutoReset;
             _timer.Enabled = true;
 
             Thread dequeueThread = new Thread(async () =>
@@ -75,15 +75,14 @@ namespace DiscordBot.Managers
 
             while (result.Count > 0)
             {
-                ulong currentGuildId = 0;
-                ulong.TryParse(result.Take(1).ToList()[0], out currentGuildId);
+                ulong.TryParse(result.Take(1).ToList()[0], out ulong currentGuildId);
                 result = result.Skip(1).ToList();
                 if (currentGuildId == 0) continue;
 
                 SocketGuild guild = _client?.GetGuild(currentGuildId);
                 if (guild == null) continue;
 
-                List<IPlugin> plugins = assemblyManager.Plugins.Get<IPlugin>();
+                List<IPlugin> plugins = AssemblyManager.Plugins.GetAllBasePlugins();
                 foreach (IPlugin plugin in plugins)
                 {
                     try

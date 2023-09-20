@@ -2,35 +2,31 @@
 using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Discord;
 using DiscordBot.Utility;
 using Microsoft.Extensions.DependencyInjection;
+using PluginTest.Enums;
 using PluginTest.Interfaces;
 
 namespace DiscordBot.Plugins
 {
     public class PluginRegistry
     {
+        private Dictionary<Type, List<object>> pluginDictionary { get; set; }
         private List<IPlugin> PluginBase { get; set; }
-        private List<IPluginChannels> PluginChannels { get; set; }
-        private List<IPluginReactions> PluginReactions { get; set; }
-        private List<IPluginCommands> PluginCommands { get; set; }
-        private List<IPluginMessages> PluginMessages { get; set; }
-        private List<IPluginComponents> PluginComponents { get; set; }
         Logger Logger { get; set; }
         public PluginRegistry(IServiceProvider serviceProvider) 
-        { 
+        {
+            pluginDictionary = new Dictionary<Type, List<object>>();
             PluginBase = new List<IPlugin>();
-            PluginChannels = new List<IPluginChannels>();
-            PluginReactions = new List<IPluginReactions>();
-            PluginCommands = new List<IPluginCommands>();
-            PluginMessages = new List<IPluginMessages>();
-            PluginComponents = new List<IPluginComponents>();
             Logger = serviceProvider.GetService<Logger>();
         }
 
+        /// <summary>
+        /// Registers the plugin in the PluginBase List. If the plugin uses an interface other than IPlugin, then its special type will be additionally registered. 
+        /// This is a very flexible registration method, where you can register any type of plugin and then recall it using the Get<T> method.
+        /// </summary>
+        /// <param name="plugin"></param>
         public async Task<Task> Register(object plugin)
         {
             if (plugin == null) return Task.CompletedTask;
@@ -42,28 +38,15 @@ namespace DiscordBot.Plugins
                 {
                     PluginBase.Add((IPlugin)plugin);
                 }
-                if (type == typeof(IPluginReactions))
+                else if (type != typeof(IPlugin))
                 {
-                    PluginReactions.Add((IPluginReactions)plugin);
-                }
-                if(type == typeof(IPluginChannels))
-                {
-                    PluginChannels.Add((IPluginChannels)plugin);
-                }
-                if(type == typeof(IPluginCommands))
-                {
-                    PluginCommands.Add((IPluginCommands)plugin);
-                }
-                if (type == typeof(IPluginMessages))
-                {
-                    PluginMessages.Add((IPluginMessages)plugin);
-                }
-                if( type == typeof(IPluginComponents))
-                {
-                    PluginComponents.Add((IPluginComponents)plugin);
+                    if (!pluginDictionary.ContainsKey(type))
+                    {
+                        pluginDictionary[type] = new List<object>();
+                    }
+                    pluginDictionary[type].Add(plugin);
                 }
             }
-            
 
             return Task.CompletedTask;
         }
@@ -78,37 +61,25 @@ namespace DiscordBot.Plugins
                 {
                     PluginBase.Remove((IPlugin)plugin);
                 }
+                else if (type != typeof(IPlugin) && pluginDictionary.ContainsKey(type))
+                {
+                    pluginDictionary[type].Remove(plugin);
+                }
             }
 
             return Task.CompletedTask;
         }
         public List<T> Get<T>()
         {
-            if (typeof(T) == typeof(IPlugin))
+            if (pluginDictionary.TryGetValue(typeof(T), out var plugins))
             {
-                return PluginBase.ConvertAll(plugin => (T)plugin);
-            }
-            if(typeof(T) == typeof(IPluginChannels))
-            {
-                return PluginChannels.ConvertAll(plugin => (T)plugin);
-            }
-            if (typeof(T) == typeof(IPluginReactions))
-            {
-                return PluginReactions.ConvertAll(plugin => (T)plugin);
-            }
-            if(typeof(T) == typeof(IPluginCommands))
-            {
-                return PluginCommands.ConvertAll(plugin => (T)plugin);
-            }
-            if (typeof(T) == typeof(IPluginMessages))
-            {
-                return PluginMessages.ConvertAll(plugin => (T)plugin);
-            }
-            if(typeof(T) == typeof(IPluginComponents))
-            {
-                return PluginComponents.ConvertAll(plugin => (T)plugin);
+                return plugins.Cast<T>().ToList();
             }
             return new List<T>();
-        } 
+        }
+        public List<IPlugin> GetAllBasePlugins()
+        {
+            return PluginBase;
+        }
     }
 }
