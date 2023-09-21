@@ -137,19 +137,23 @@ namespace DiscordBot.Managers
         /// <returns></returns>
         private async Task<bool> CreateArchive(string[] dirFiles, string zipOutputPath)
         {
-            try
+
+            using (ZipArchive archive = ZipFile.Open(zipOutputPath, ZipArchiveMode.Create))
             {
-                using (ZipArchive archive = ZipFile.Open(zipOutputPath, ZipArchiveMode.Create))
+                foreach (var file in dirFiles)
                 {
-                    foreach (var file in dirFiles)
+                    try
                     {
                         archive.CreateEntryFromFile(file, Path.GetFileName(file));
                     }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(ModuleName, $"Could not create a backup for {file} file: {ex.Message}", LogLevel.Warn);
+                        continue;
+                    }
                 }
-            }catch (Exception ex)
-            {
-                return false;
             }
+
             return true;
         }
         /// <summary>

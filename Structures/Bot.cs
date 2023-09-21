@@ -40,6 +40,7 @@ namespace DiscordBot.Structures
         }
         public async Task MainAsync(string[] args = null)
         {
+            Console.Title = BotName;
             await Database.Initalize();
             await AssemblyManager.Initalize();
             await BackupManager.Initalize();
@@ -47,15 +48,7 @@ namespace DiscordBot.Structures
             
             this.args = args;
 
-            int.TryParse(appConfig["BackupInterval"], out int BackupUpdateInterval);
-            if (BackupUpdateInterval > 0)
-            {
-                await BackupManager.Start(BackupUpdateInterval);
-            }else
-                await BackupManager.Start();
-
-            //register all files for backup
-            await BackupManager.RegisterBackupFile("bot.db");
+            
 
 
             var config = ServiceProvider.GetService<DiscordSocketConfig>();
@@ -81,6 +74,7 @@ namespace DiscordBot.Structures
             //users
             _client.UserJoined += UserJoined;
             _client.UserVoiceStateUpdated += OnUserVoiceStateUpdated;
+            
             //messages
             _client.MessageDeleted += MessageDeleted;
             _client.MessageReceived += MessageReceived;
@@ -122,7 +116,7 @@ namespace DiscordBot.Structures
 
             var config = new DiscordSocketConfig
             {
-                MessageCacheSize = 100,
+                MessageCacheSize = 999999,
                 AlwaysDownloadUsers = true,
                 GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.DirectMessages | GatewayIntents.MessageContent | GatewayIntents.GuildMessageReactions | GatewayIntents.GuildMembers | GatewayIntents.GuildVoiceStates | GatewayIntents.GuildPresences
             };
@@ -316,6 +310,17 @@ namespace DiscordBot.Structures
                     Logger.Log(BotName, $"Error in: {plugin.Name}, message: {ex.Message}", LogLevel.Error);
                 }
             }
+
+            int.TryParse(appConfig["BackupInterval"], out int BackupUpdateInterval);
+            if (BackupUpdateInterval > 0)
+            {
+                await BackupManager.Start(BackupUpdateInterval);
+            }
+            else
+                await BackupManager.Start();
+
+            //register all files for backup
+            await BackupManager.RegisterBackupFile("bot.db");
 
             return Task.CompletedTask;
         }
