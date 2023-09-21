@@ -82,6 +82,48 @@ namespace DiscordBot.Structures
         /// <summary>
         /// 
         /// </summary>
+        /// <param name="queries"></param>
+        /// <param name="parameters"></param>
+        /// <param name="config"></param>
+        /// <returns></returns>
+        public async Task<int> UpdateTransactionQueryAsync(List<string> queries, List<KeyValuePair<string, string>> parameters = null, Config config = null)
+        {
+            using SQLiteConnection conn = new SQLiteConnection(connectionString);
+            conn.Open();
+            int result = 0;
+
+            using(var transaction = conn.BeginTransaction())
+            {
+                try
+                {
+                    foreach(string query in queries)
+                    {
+                        string q = query;
+
+                        if (query.Contains("#") && config != null)
+                        {
+                            q = ParseQueryTableName(query, config.pluginName);
+                        }
+
+                        using (var cmd =  new SQLiteCommand(q, conn, transaction))
+                        {
+
+                            if (parameters != null) foreach (KeyValuePair<string, string> parameter in parameters) cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
+                            result += await cmd.ExecuteNonQueryAsync();
+                        }
+                    }
+                    transaction.Commit();
+                }catch (Exception ex) 
+                { 
+                    transaction.Rollback();
+                    Logger.Log("Database", $"Failed to update records in transaction, rolling back {queries.Count} queries", LogLevel.Warn);
+                }
+            }
+            return 0;
+        }
+        /// <summary>
+        /// 
+        /// </summary>
         /// <param name="query"></param>
         /// <param name="parameters"></param>
         /// <param name="config"></param>
@@ -121,6 +163,49 @@ namespace DiscordBot.Structures
         /// <param name="parameters"></param>
         /// <param name="config"></param>
         /// <returns></returns>
+        public async Task<int> DeleteTransactionQueryAsync(List<string> queries, List<KeyValuePair<string, string>> parameters = null, Config config = null)
+        {
+            using SQLiteConnection conn = new SQLiteConnection(connectionString);
+            conn.Open();
+            int result = 0;
+
+            using (var transaction = conn.BeginTransaction())
+            {
+                try
+                {
+                    foreach (string query in queries)
+                    {
+                        string q = query;
+
+                        if (query.Contains("#") && config != null)
+                        {
+                            q = ParseQueryTableName(query, config.pluginName);
+                        }
+
+                        using (var cmd = new SQLiteCommand(q, conn, transaction))
+                        {
+
+                            if (parameters != null) foreach (KeyValuePair<string, string> parameter in parameters) cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
+                            result += await cmd.ExecuteNonQueryAsync();
+                        }
+                    }
+                    transaction.Commit();
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    Logger.Log("Database", $"Failed to update records in transaction, rolling back {queries.Count} queries", LogLevel.Warn);
+                }
+            }
+            return 0;
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="query"></param>
+        /// <param name="parameters"></param>
+        /// <param name="config"></param>
+        /// <returns></returns>
         public async Task<int> InsertQueryAsync(string query, List<KeyValuePair<string, string>> parameters = null, Config config = null)
         {
             string q = query;
@@ -148,6 +233,49 @@ namespace DiscordBot.Structures
             }
             conn.Close();
             return result;
+        }
+        public async Task<int> InsertTransactionQueryAsync(List<string> queries, List<KeyValuePair<string, string>> parameters = null, Config config = null)
+        {
+            using SQLiteConnection conn = new SQLiteConnection(connectionString);
+            conn.Open();
+            int failed = 0, succeed = 0;
+
+            using (var transaction = conn.BeginTransaction())
+            {
+
+                foreach (string query in queries)
+                {
+                    try
+                    {
+                        string q = query;
+                        if (query.Contains("#") && config != null)
+                        {
+                            q = ParseQueryTableName(query, config.pluginName);
+                        }
+
+                        using (var cmd = new SQLiteCommand(q, conn, transaction))
+                        {
+
+                            if (parameters != null) foreach (KeyValuePair<string, string> parameter in parameters) cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
+                            succeed += cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (SQLiteException e)
+                    {
+                        if (e.ErrorCode == 19)
+                        {
+                            failed++;
+                            continue;
+                        }
+                        transaction.Rollback();
+                        Logger.Log("Database", $"Failed to update records in transaction, rolling back {queries.Count} queries, error: {e.Message}", LogLevel.Error);
+                        break;
+                    }
+                }
+                transaction.Commit();
+                Logger.Log("Database", $"Total records in transaction: {queries.Count}, failed: {failed}, succeed: {succeed}", LogLevel.Info);
+            }
+            return succeed;
         }
         /// <summary>
         /// 
