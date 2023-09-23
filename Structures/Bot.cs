@@ -40,16 +40,12 @@ namespace DiscordBot.Structures
         }
         public async Task MainAsync(string[] args = null)
         {
-            Console.Title = BotName;
             await Database.Initalize();
             await AssemblyManager.Initalize();
             await BackupManager.Initalize();
             var token = appConfig["bot_token"];
             
             this.args = args;
-
-            
-
 
             var config = ServiceProvider.GetService<DiscordSocketConfig>();
             
@@ -251,11 +247,15 @@ namespace DiscordBot.Structures
 
         private async Task<Task> Client_Ready()
         {
+            //-gcbuild as an argument that forces bot to rebuild all global slash commands.
             bool gcbuild = false;
             if (args != null)
                 foreach (string arg in args)
                 {
-                    if (arg == "-gcbuild") { gcbuild = true; }
+                    if (arg == "-gcbuild") 
+                    { 
+                        gcbuild = true;
+                    }
                 }
 
             List<IPlugin> plugins = AssemblyManager.Plugins.GetAllBasePlugins();
@@ -290,14 +290,15 @@ namespace DiscordBot.Structures
                     Logger.Log(plugin.Config.pluginName, $"Failed to build global command: {ex.Message}", LogLevel.Error);
                 }
             }
+            //We give all plugins the ability to control all guilds in which the bot works.
             List<SocketGuild> socketGuilds = await GetAllGuilds();
             await AssemblyManager.SetPluginsVariables(_client, socketGuilds);
 
             TaskManager = new TaskQueueManager(_client, AssemblyManager, ServiceProvider, 1);
             await TaskManager.Start(AutoReset: true);
 
-            
 
+            //When each plugin has been properly configured by the bot, we can send information that it is ready and the plugin has access to all functions provided by the API.
             foreach (IPlugin plugin in plugins)
             {
                 try
@@ -306,7 +307,9 @@ namespace DiscordBot.Structures
                 }
                 catch(Exception ex)
                 {
+                    //ignore it if plugin throws NotImplementedException
                     if (ex is NotImplementedException) continue;
+
                     Logger.Log(BotName, $"Error in: {plugin.Name}, message: {ex.Message}", LogLevel.Error);
                 }
             }
@@ -319,7 +322,7 @@ namespace DiscordBot.Structures
             else
                 await BackupManager.Start();
 
-            //register all files for backup
+            //register all files for backup here
             await BackupManager.RegisterBackupFile("bot.db");
 
             return Task.CompletedTask;

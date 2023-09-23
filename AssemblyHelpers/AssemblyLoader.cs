@@ -16,6 +16,11 @@ namespace DiscordBot.AssemblyHelpers
         private const string FileType = "*.dll";
         private List<AssemblyData> AssemblyData { get; set; }
         private readonly Logger Logger;
+        /// <summary>
+        /// Used to load all <see cref="IPlugin"/> assemblies in the given path.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="serviceProvider"></param>
         public AssemblyLoader(string path,IServiceProvider serviceProvider)
         {
             FilePath = path;
@@ -23,6 +28,9 @@ namespace DiscordBot.AssemblyHelpers
             Logger = serviceProvider.GetService<Logger>();
         }
 
+        /// <summary>
+        /// Loads and checks the compatibility of all assemblies in the given path.
+        /// </summary>
         public void Load()
         {
             AssemblyData data;
@@ -60,6 +68,10 @@ namespace DiscordBot.AssemblyHelpers
                 }
             }
         }
+        /// <summary>
+        /// Iterates over all loaded assemblies.
+        /// </summary>
+        /// <returns></returns>
         public IEnumerator<AssemblyData> GetEnumerator()
         {
             foreach(AssemblyData data in AssemblyData)

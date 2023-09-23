@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <version>1.0.0.0</version>
+  <configNameSuffix>_config</configNameSuffix>
+  <GlobalCommandCreated>true</GlobalCommandCreated>
+  <ModalsCreated>false</ModalsCreated>
+  <dirPath>Plugins/</dirPath>
+  <assemblyName>ServerStat</assemblyName>
+  <pluginName>ServerStat</pluginName>
+</Config>

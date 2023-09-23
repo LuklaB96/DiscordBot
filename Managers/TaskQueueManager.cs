@@ -27,7 +27,14 @@ namespace DiscordBot.Managers
         AssemblyManager AssemblyManager { get; set; }
         Logger Logger { get; set; }
         Database Database { get; set; }
-
+        /// <summary>
+        /// Provides a built-in ability to control the number of actions performed by the plugin. Works in the background without affecting the main thread.
+        /// <br></br>It should be enabled by default. The plugin API provides an Update method that is called by the <see cref="TaskQueueManager"/> at a specified interval.
+        /// </summary>
+        /// <param name="client"></param>
+        /// <param name="assemblyManager"></param>
+        /// <param name="serviceProvider"></param>
+        /// <param name="seconds"></param>
         public TaskQueueManager(DiscordSocketClient client, AssemblyManager assemblyManager, IServiceProvider serviceProvider, double seconds = 1)
         {
             _client = client;
@@ -37,8 +44,13 @@ namespace DiscordBot.Managers
             Database = serviceProvider.GetService<Database>();
         }
 
-        // Start the timer
-        public async Task Start(bool AutoReset = false)
+        /// <summary>
+        /// Starts ConcurrentQueue. Waiting for work from any of the active plugins. Dequeue thread can take action every 1 second by default.
+        /// TO DO: make dequeue thread sleep time configurable.
+        /// </summary>
+        /// <param name="AutoReset"></param>
+        /// <returns></returns>
+        public async Task Start(bool AutoReset = true)
         {
             _timer.Elapsed += OnTimedEvent;
             _timer.AutoReset = AutoReset;
@@ -51,7 +63,7 @@ namespace DiscordBot.Managers
                     if (actionQueue.TryDequeue(out Func<Task> function))
                     {
                         await function();
-                        Thread.Sleep(1000); //global rate limit for ModifyMessageAsync is set to 5 seconds per action
+                        Thread.Sleep(1000);
                     }
                     else
                     {
@@ -68,6 +80,10 @@ namespace DiscordBot.Managers
             await ExecutePluginUpdate();
 
         }
+        /// <summary>
+        /// Calls the Update method of all active plugins at a specified interval. If plugin returns function, it will enqueued in dequeue thread and executed when it turn comes.
+        /// </summary>
+        /// <returns></returns>
         private async Task ExecutePluginUpdate()
         {
             const string selectQuery = "SELECT guild_id FROM guildsettings";
