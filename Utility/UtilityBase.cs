@@ -10,6 +10,11 @@ namespace DiscordBot.Utility
         protected Logger Logger { get; }
         protected Database Database { get; }
         protected AssemblyManager AssemblyManager { get; }
+        /// <summary>
+        /// Utility base class that is mainly used for inheritance.
+        /// </summary>
+        /// <param name="serviceProvider"></param>
+        /// <param name="assemblyManager"></param>
         public UtilityBase(IServiceProvider serviceProvider, AssemblyManager assemblyManager)
         {
             Logger = serviceProvider.GetService<Logger>();

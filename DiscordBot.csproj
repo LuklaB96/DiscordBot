@@ -20,13 +20,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="PluginTest">
-      <HintPath>..\..\PluginTest\PluginTest\bin\Release\netcoreapp3.1\PluginTest.dll</HintPath>
-    </Reference>
+    <Folder Include="Interface\" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Interface\" />
+    <Reference Include="PluginTest">
+      <HintPath>..\..\PluginTest\PluginTest\bin\Release\net7.0\PluginTest.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

@@ -3,11 +3,14 @@ using DiscordBot.Managers;
 using DiscordBot.Utility;
 using PluginTest;
 using PluginTest.Enums;
+using PluginTest.Helpers;
 using PluginTest.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Data.SQLite;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace DiscordBot.Structures
@@ -26,7 +29,7 @@ namespace DiscordBot.Structures
             Logger = new Logger();
         }
         /// <summary>
-        /// 
+        /// Creates all missing tables in Database.
         /// </summary>
         /// <returns></returns>
         public async Task Initalize()
@@ -234,19 +237,27 @@ namespace DiscordBot.Structures
             conn.Close();
             return result;
         }
-        public async Task<int> InsertTransactionQueryAsync(List<string> queries, List<KeyValuePair<string, string>> parameters = null, Config config = null)
+        public async Task<int> InsertTransactionQueryAsync(DatabaseTransactionBuilder transactionBuilder = null, Dictionary<string, List<KeyValuePair<string, string>>> queries = null, Config config = null)
         {
+            Stopwatch sw = Stopwatch.StartNew();
+            IReadOnlyCollection<string> queryList = null;
+
+            if (queries == null && transactionBuilder == null) return 0;
+            if (queries != null) queryList = queries.Keys.ToList();
+            if (transactionBuilder != null) queryList = transactionBuilder.GetQueries();
+
             using SQLiteConnection conn = new SQLiteConnection(connectionString);
             conn.Open();
             int failed = 0, succeed = 0;
 
             using (var transaction = conn.BeginTransaction())
             {
-
-                foreach (string query in queries)
+                foreach(var query in queryList)
                 {
+                    
                     try
                     {
+                        var parameters = transactionBuilder.GetValue(query);
                         string q = query;
                         if (query.Contains("#") && config != null)
                         {
@@ -255,9 +266,8 @@ namespace DiscordBot.Structures
 
                         using (var cmd = new SQLiteCommand(q, conn, transaction))
                         {
-
                             if (parameters != null) foreach (KeyValuePair<string, string> parameter in parameters) cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
-                            succeed += cmd.ExecuteNonQuery();
+                            succeed += await cmd.ExecuteNonQueryAsync();
                         }
                     }
                     catch (SQLiteException e)
@@ -268,12 +278,13 @@ namespace DiscordBot.Structures
                             continue;
                         }
                         transaction.Rollback();
-                        Logger.Log("Database", $"Failed to update records in transaction, rolling back {queries.Count} queries, error: {e.Message}", LogLevel.Error);
+                        Logger.Log("Database", $"Failed to update records in transaction, rolling back {succeed} queries, error: {e.Message}", LogLevel.Error);
                         break;
                     }
                 }
                 transaction.Commit();
-                Logger.Log("Database", $"Total records in transaction: {queries.Count}, failed: {failed}, succeed: {succeed}", LogLevel.Info);
+                sw.Stop();
+                Logger.Log("Database", $"Total records in transaction: {succeed + failed}, failed: {failed}, succeed: {succeed}, operation time: {sw.ElapsedMilliseconds} ms", LogLevel.Info);
             }
             return succeed;
         }
