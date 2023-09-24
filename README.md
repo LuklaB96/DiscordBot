@@ -1,3 +1,6 @@
+<div align="center">
+  
 # DiscordBot
-Plugin based discord bot, no documentation created yet.  
-To get more information on creating plugins and working with them, please navigate to this [repository](https://github.com/LuklaB96/DiscordPluginAPI).
+
+</div>
+This bot was written mainly for the purpose of completing a college project; its main advantage is the ability to create plugins based on the provided API. If we want to create a fully functional bot, we don't have to worry about creating it from scratch. The bot has built-in database, backup and logger support.
