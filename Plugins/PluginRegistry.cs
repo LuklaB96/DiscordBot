@@ -1,12 +1,10 @@
 ﻿using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DiscordBot.Utility;
 using Microsoft.Extensions.DependencyInjection;
-using PluginTest.Enums;
-using PluginTest.Interfaces;
+using DiscordPluginAPI.Interfaces;
 
 namespace DiscordBot.Plugins
 {

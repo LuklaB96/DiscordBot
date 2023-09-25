@@ -1,8 +1,6 @@
-﻿using Discord;
-using PluginTest.Enums;
-using PluginTest.Interfaces;
+﻿using DiscordPluginAPI.Enums;
+using DiscordPluginAPI.Interfaces;
 using System;
-using System.Collections.Generic;
 using System.Text;
 
 namespace DiscordBot.Utility

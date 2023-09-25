@@ -1,13 +1,10 @@
-﻿using Discord;
-using DiscordBot.Managers;
-using DiscordBot.Utility;
-using PluginTest;
-using PluginTest.Enums;
-using PluginTest.Helpers;
-using PluginTest.Interfaces;
+﻿using DiscordBot.Utility;
+using DiscordPluginAPI;
+using DiscordPluginAPI.Enums;
+using DiscordPluginAPI.Helpers;
+using DiscordPluginAPI.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Data.SQLite;
 using System.Diagnostics;
 using System.Linq;
@@ -22,7 +19,7 @@ namespace DiscordBot.Structures
      */
     public class Database : IDatabase
     {
-        private static readonly string connectionString = string.Intern(@"Data Source=bot.db");
+        private static readonly string connectionString = @"Data Source=bot.db";
         private readonly ILogger Logger;
         public Database() 
         {
@@ -46,15 +43,16 @@ namespace DiscordBot.Structures
             conn.Close();
         }
         /// <summary>
-        /// 
+        /// Asynchronously executes an SQL query to update data in a SQLite database.
         /// </summary>
-        /// <param name="query"></param>
-        /// <param name="parameters"></param>
-        /// <param name="config"></param>
-        /// <returns></returns>
-        public async Task<int> UpdateQueryAsync(string query, List<KeyValuePair<string, string>> parameters = null, Config config = null)
+        /// <param name="query">The SQL query to be executed.</param>
+        /// <param name="parameters">Optional query parameters to be used in the query.</param>
+        /// <param name="config">Optional configuration for parsing the query based on the plugin.</param>
+        /// <returns>An integer representing the number of rows affected by the query.</returns>
+        public async Task<int> UpdateQueryAsync(string query, QueryParametersBuilder parameters = null, Config config = null)
         {
             string q = query;
+            //If the plugin uses the bot's main database, the bot must parse information about the plugin in a given query.
             if (query.Contains("#") && config != null)
             {
                 q = ParseQueryTableName(query, config.pluginName);
@@ -65,9 +63,9 @@ namespace DiscordBot.Structures
             int result = 0;
             using (SQLiteCommand cmd = new SQLiteCommand(conn))
             {
-
                 cmd.CommandText = q;
-                if (parameters != null) foreach (KeyValuePair<string, string> parameter in parameters) cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
+
+                if (parameters != null) foreach (KeyValuePair<string, string> parameter in parameters.GetAll()) cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
 
                 try
                 {
@@ -83,57 +81,76 @@ namespace DiscordBot.Structures
             return result;
         }
         /// <summary>
-        /// 
+        /// Asynchronously executes a series of SQL queries in a transaction to update data in a SQLite database.
         /// </summary>
-        /// <param name="queries"></param>
-        /// <param name="parameters"></param>
-        /// <param name="config"></param>
+        /// <param name="transactionBuilder">Optional builder for constructing the transaction queries.</param>
+        /// <param name="queries">Optional dictionary of queries to execute.</param>
+        /// <param name="config">Optional configuration for parsing queries based on the plugin.</param>
+        /// <returns>An integer representing the total number of rows affected by the queries in the transaction.</returns>aram>
         /// <returns></returns>
-        public async Task<int> UpdateTransactionQueryAsync(List<string> queries, List<KeyValuePair<string, string>> parameters = null, Config config = null)
+        public async Task<int> UpdateTransactionQueryAsync(DatabaseTransactionBuilder transactionBuilder = null, Dictionary<string, List<KeyValuePair<string, string>>> queries = null, Config config = null)
         {
+            Stopwatch sw = Stopwatch.StartNew();
+            IReadOnlyCollection<string> queryList = null;
+
+            if (queries == null && transactionBuilder == null) return 0;
+            if (queries != null) queryList = queries.Keys.ToList();
+            if (transactionBuilder != null) queryList = transactionBuilder.GetQueries();
+
             using SQLiteConnection conn = new SQLiteConnection(connectionString);
             conn.Open();
-            int result = 0;
+            int failed = 0, succeed = 0;
 
-            using(var transaction = conn.BeginTransaction())
+            using (var transaction = conn.BeginTransaction())
             {
-                try
+                foreach (var query in queryList)
                 {
-                    foreach(string query in queries)
-                    {
-                        string q = query;
 
+                    try
+                    {
+                        var parameters = transactionBuilder.GetValue(query);
+                        string q = query;
+                        //If the plugin uses the bot's main database, the bot must parse information about the plugin in a given query.
                         if (query.Contains("#") && config != null)
                         {
                             q = ParseQueryTableName(query, config.pluginName);
                         }
 
-                        using (var cmd =  new SQLiteCommand(q, conn, transaction))
+                        using (var cmd = new SQLiteCommand(q, conn, transaction))
                         {
-
                             if (parameters != null) foreach (KeyValuePair<string, string> parameter in parameters) cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
-                            result += await cmd.ExecuteNonQueryAsync();
+                            succeed += await cmd.ExecuteNonQueryAsync();
                         }
                     }
-                    transaction.Commit();
-                }catch (Exception ex) 
-                { 
-                    transaction.Rollback();
-                    Logger.Log("Database", $"Failed to update records in transaction, rolling back {queries.Count} queries", LogLevel.Warn);
+                    catch (SQLiteException e)
+                    {
+                        if (e.ErrorCode == 19)
+                        {
+                            failed++;
+                            continue;
+                        }
+                        transaction.Rollback();
+                        Logger.Log("Database", $"Failed to update records in transaction, rolling back {succeed} queries, error: {e.Message}", LogLevel.Error);
+                        break;
+                    }
                 }
+                transaction.Commit();
+                sw.Stop();
+                Logger.Log("Database", $"Total records in update transaction: {succeed + failed}, failed: {failed}, succeed: {succeed}, operation time: {sw.ElapsedMilliseconds} ms", LogLevel.Info);
             }
-            return 0;
+            return succeed;
         }
         /// <summary>
-        /// 
+        /// Asynchronously executes an SQL query to delete data from a SQLite database.
         /// </summary>
-        /// <param name="query"></param>
-        /// <param name="parameters"></param>
-        /// <param name="config"></param>
-        /// <returns></returns>
-        public async Task<int> DeleteQueryAsync(string query, List<KeyValuePair<string, string>> parameters = null, Config config = null)
+        /// <param name="query">The SQL query used for deleting data.</param>
+        /// <param name="parameters">Optional query parameters to be used in the query.</param>
+        /// <param name="config">Optional configuration for parsing the query based on the plugin.</param>
+        /// <returns>An integer representing the number of rows affected by the delete query.</returns>
+        public async Task<int> DeleteQueryAsync(string query, QueryParametersBuilder parameters = null, Config config = null)
         {
             string q = query;
+            //If the plugin uses the bot's main database, the bot must parse information about the plugin in a given query.
             if (query.Contains("#") && config != null)
             {
                 q = ParseQueryTableName(query, config.pluginName);
@@ -146,7 +163,7 @@ namespace DiscordBot.Structures
             {
                 cmd.CommandText = q;
 
-                if (parameters != null) foreach (KeyValuePair<string, string> parameter in parameters) cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
+                if (parameters != null) foreach (KeyValuePair<string, string> parameter in parameters.GetAll()) cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
                 try
                 {
                     result = await cmd.ExecuteNonQueryAsync();
@@ -160,26 +177,35 @@ namespace DiscordBot.Structures
             return result;
         }
         /// <summary>
-        /// 
+        /// Asynchronously executes a series of SQL queries in a transaction to delete data from a SQLite database.
         /// </summary>
-        /// <param name="query"></param>
-        /// <param name="parameters"></param>
-        /// <param name="config"></param>
-        /// <returns></returns>
-        public async Task<int> DeleteTransactionQueryAsync(List<string> queries, List<KeyValuePair<string, string>> parameters = null, Config config = null)
+        /// <param name="transactionBuilder">Optional builder for constructing the transaction queries.</param>
+        /// <param name="queries">Optional dictionary of delete queries to execute.</param>
+        /// <param name="config">Optional configuration for parsing queries based on the plugin.</param>
+        /// <returns>An integer representing the total number of rows affected by the delete queries in the transaction.</returns>
+        public async Task<int> DeleteTransactionQueryAsync(DatabaseTransactionBuilder transactionBuilder = null, Dictionary<string, List<KeyValuePair<string, string>>> queries = null, Config config = null)
         {
+            Stopwatch sw = Stopwatch.StartNew();
+            IReadOnlyCollection<string> queryList = null;
+
+            if (queries == null && transactionBuilder == null) return 0;
+            if (queries != null) queryList = queries.Keys.ToList();
+            if (transactionBuilder != null) queryList = transactionBuilder.GetQueries();
+
             using SQLiteConnection conn = new SQLiteConnection(connectionString);
             conn.Open();
-            int result = 0;
+            int failed = 0, succeed = 0;
 
             using (var transaction = conn.BeginTransaction())
             {
-                try
+                foreach (var query in queryList)
                 {
-                    foreach (string query in queries)
-                    {
-                        string q = query;
 
+                    try
+                    {
+                        var parameters = transactionBuilder.GetValue(query);
+                        string q = query;
+                        //If the plugin uses the bot's main database, the bot must parse information about the plugin in a given query.
                         if (query.Contains("#") && config != null)
                         {
                             q = ParseQueryTableName(query, config.pluginName);
@@ -187,31 +213,39 @@ namespace DiscordBot.Structures
 
                         using (var cmd = new SQLiteCommand(q, conn, transaction))
                         {
-
                             if (parameters != null) foreach (KeyValuePair<string, string> parameter in parameters) cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
-                            result += await cmd.ExecuteNonQueryAsync();
+                            succeed += await cmd.ExecuteNonQueryAsync();
                         }
                     }
-                    transaction.Commit();
+                    catch (SQLiteException e)
+                    {
+                        if (e.ErrorCode == 19)
+                        {
+                            failed++;
+                            continue;
+                        }
+                        transaction.Rollback();
+                        Logger.Log("Database", $"Failed to delete records in transaction, rolling back {succeed} queries, error: {e.Message}", LogLevel.Error);
+                        break;
+                    }
                 }
-                catch (Exception ex)
-                {
-                    transaction.Rollback();
-                    Logger.Log("Database", $"Failed to update records in transaction, rolling back {queries.Count} queries", LogLevel.Warn);
-                }
+                transaction.Commit();
+                sw.Stop();
+                Logger.Log("Database", $"Total records in delete transaction: {succeed + failed}, failed: {failed}, succeed: {succeed}, operation time: {sw.ElapsedMilliseconds} ms", LogLevel.Info);
             }
-            return 0;
+            return succeed;
         }
         /// <summary>
-        /// 
+        /// Asynchronously executes an SQL query to insert data into a SQLite database.
         /// </summary>
-        /// <param name="query"></param>
-        /// <param name="parameters"></param>
-        /// <param name="config"></param>
-        /// <returns></returns>
-        public async Task<int> InsertQueryAsync(string query, List<KeyValuePair<string, string>> parameters = null, Config config = null)
+        /// <param name="query">The SQL query used for inserting data.</param>
+        /// <param name="parameters">Optional query parameters to be used in the query.</param>
+        /// <param name="config">Optional configuration for parsing the query based on the plugin.</param>
+        /// <returns>An integer representing the number of rows affected by the insert query.</returns>
+        public async Task<int> InsertQueryAsync(string query, QueryParametersBuilder parameters = null, Config config = null)
         {
             string q = query;
+            //If the plugin uses the bot's main database, the bot must parse information about the plugin in a given query.
             if (query.Contains("#") && config != null)
             {
                 q = ParseQueryTableName(query, config.pluginName);
@@ -223,7 +257,7 @@ namespace DiscordBot.Structures
             {
                 cmd.CommandText = q;
 
-                if (parameters != null) foreach (KeyValuePair<string, string> parameter in parameters) cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
+                if (parameters != null) foreach (KeyValuePair<string, string> parameter in parameters.GetAll()) cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
 
                 try
                 {
@@ -237,6 +271,13 @@ namespace DiscordBot.Structures
             conn.Close();
             return result;
         }
+        /// <summary>
+        /// Asynchronously executes a series of SQL queries in a transaction to insert data into a SQLite database.
+        /// </summary>
+        /// <param name="transactionBuilder">Optional builder for constructing the transaction insert queries.</param>
+        /// <param name="queries">Optional dictionary of insert queries to execute.</param>
+        /// <param name="config">Optional configuration for parsing queries based on the plugin.</param>
+        /// <returns>An integer representing the total number of rows affected by the insert queries in the transaction.</returns>
         public async Task<int> InsertTransactionQueryAsync(DatabaseTransactionBuilder transactionBuilder = null, Dictionary<string, List<KeyValuePair<string, string>>> queries = null, Config config = null)
         {
             Stopwatch sw = Stopwatch.StartNew();
@@ -259,6 +300,7 @@ namespace DiscordBot.Structures
                     {
                         var parameters = transactionBuilder.GetValue(query);
                         string q = query;
+                        //If the plugin uses the bot's main database, the bot must parse information about the plugin in a given query.
                         if (query.Contains("#") && config != null)
                         {
                             q = ParseQueryTableName(query, config.pluginName);
@@ -289,10 +331,10 @@ namespace DiscordBot.Structures
             return succeed;
         }
         /// <summary>
-        /// 
+        /// Reads all values processed by the query, converts all values to a <see cref="string"/> type variable
         /// </summary>
-        /// <param name="cmd"></param>
-        /// <returns></returns>
+        /// <param name="cmd">The SQL command used for data retrieval.</param>
+        /// <returns>A <see cref="List{T}"/> where T is <see cref="string"/> representing the retrieved data.</returns>
         private async Task<List<string>> DataReaderAsync(SQLiteCommand cmd)
         {
             List<string> items = new List<string>();
@@ -311,13 +353,13 @@ namespace DiscordBot.Structures
             return items;
         }
         /// <summary>
-        /// 
+        /// Asynchronously executes an SQL query to retrieve data from a SQLite database and returns the result as a <see cref="List{T}"/> where T is <see cref="string"/>.
         /// </summary>
-        /// <param name="query"></param>
-        /// <param name="parameters"></param>
-        /// <param name="config"></param>
-        /// <returns></returns>
-        public async Task<List<string>> SelectQueryAsync(string query, List<KeyValuePair<string,string>> parameters = null, Config config = null)
+        /// <param name="query">The SQL query used for data retrieval.</param>
+        /// <param name="parameters">Optional query parameters to be used in the query.</param>
+        /// <param name="config">Optional configuration for parsing the query based on the plugin.</param>
+        /// <returns>A <see cref="List{T}"/> where T is <see cref="string"/> representing the retrieved data.</returns>
+        public async Task<List<string>> SelectQueryAsync(string query, QueryParametersBuilder parameters = null, Config config = null)
         {
             string q = query;
             if (query.Contains("#") && config != null)
@@ -330,14 +372,14 @@ namespace DiscordBot.Structures
             conn.Open();
             using (SQLiteCommand cmd = new SQLiteCommand(q, conn))
             {
-                if (parameters != null) foreach (KeyValuePair<string, string> parameter in parameters) cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
+                if (parameters != null) foreach (KeyValuePair<string, string> parameter in parameters.GetAll()) cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
                     items = await DataReaderAsync(cmd);
             }
             conn.Close();
             return items;
         }
         /// <summary>
-        /// 
+        /// Asynchronously checks and creates a table in a SQLite database for a given plugin if it doesn't already exist.
         /// </summary>
         /// <param name="conn"></param>
         /// <param name="pluginName"></param>
@@ -355,20 +397,20 @@ namespace DiscordBot.Structures
             conn.Close();
         }
         /// <summary>
-        /// 
+        /// Parses a query string by replacing the '#' symbol with the specified plugin name, helping plugins to identify themselves.
         /// </summary>
-        /// <param name="query"></param>
-        /// <param name="pluginName"></param>
-        /// <returns></returns>
+        /// <param name="query">The query string to be parsed.</param>
+        /// <param name="pluginName">The name of the plugin for identification.</param>
+        /// <returns>The parsed query string with the plugin name.</returns>
         private string ParseQueryTableName(string query, string pluginName)
         {
             return query.Replace("#", pluginName + "_");
         }
         /// <summary>
-        /// 
+        /// Checks if a table with the specified name already exists in the SQLite database.
         /// </summary>
-        /// <param name="tableName"></param>
-        /// <returns></returns>
+        /// <param name="tableName">The name of the table to check for existence.</param>
+        /// <returns><see langword="True"/> if the table exists, <see langword="false"/> otherwise.</returns>
         public bool TableAlreadyExists(string tableName)
         {
             string query = "SELECT name FROM sqlite_master WHERE type='table' AND name='" + tableName + "';";
@@ -386,7 +428,7 @@ namespace DiscordBot.Structures
             
         }
         /// <summary>
-        /// 
+        /// Creates a table, columnProperties format: "column_name1 TEXT PRIMARY KEY, column_name2 TEXT" etc.
         /// </summary>
         /// <param name="conn"></param>
         /// <param name="tableName"></param>
@@ -405,41 +447,5 @@ namespace DiscordBot.Structures
                 Logger.Log("Database",$"Error while creating a table: {ex.Message}",LogLevel.Error);
             }
         }
-        //public async Task CreateTableAsync(SQLiteConnection conn, string tableName)
-        //{
-        //    using SQLiteCommand cmd = new SQLiteCommand(conn);
-        //    switch (tableName)
-        //    {
-        //        case "giveaways":
-        //            cmd.CommandText = "CREATE TABLE IF NOT EXISTS " + tableName + " (id TEXT PRIMARY KEY, guild_id TEXT, channel_id TEXT, message_id TEXT, message_owner TEXT, max_winners INTEGER, winner TEXT, entries INTEGER DEFAULT 0 NOT NULL, ends INTEGER DEFAULT 1 NOT NULL, ended INTEGER DEFAULT 0 NOT NULL, closed INTEGER DEFAULT 0 NOT NULL, created_at TEXT)";
-        //            break;
-        //        case "polls":
-        //            cmd.CommandText = "CREATE TABLE IF NOT EXISTS " + tableName + " (id TEXT PRIMARY KEY, guild_id TEXT, channel_id TEXT, message_id TEXT, message_owner TEXT, bot_reactions TEXT, ends TEXT, closed INTEGER DEFAULT 0 NOT NULL, created_at TEXT)";
-        //            break;
-        //        case "autorole":
-        //            cmd.CommandText = "CREATE TABLE IF NOT EXISTS " + tableName + " (guild_id TEXT PRIMARY KEY, roles TEXT)";
-        //            break;
-        //        case "reactionrole":
-        //            cmd.CommandText = "CREATE TABLE IF NOT EXISTS " + tableName + " (id INTEGER PRIMARY KEY, guild_id TEXT, name TEXT, emotes TEXT, roles TEXT)";
-        //            break;
-        //        case "reactionrole_message":
-        //            cmd.CommandText = "CREATE TABLE IF NOT EXISTS " + tableName + " (id INTEGER PRIMARY KEY, guild_id TEXT, channel_id TEXT, message_id TEXT, reactionrole_id TEXT, FOREIGN KEY (reactionrole_id) REFERENCES reactionrole(id))";
-        //            break;
-        //        case "guildsettings":
-        //            cmd.CommandText = "CREATE TABLE IF NOT EXISTS " + tableName + " (guild_id TEXT PRIMARY KEY, prefix TEXT)";
-        //            break;
-        //        case "giveaway_users":
-        //            cmd.CommandText = "CREATE TABLE IF NOT EXISTS " + tableName + " (id INTEGER PRIMARY KEY, giveaway_id TEXT, user_id TEXT)";
-        //            break;
-        //        case "suggestions":
-        //            cmd.CommandText = "CREATE TABLE IF NOT EXISTS " + tableName + " (id INTEGER PRIMARY KEY, guild_id TEXT, user_id TEXT, suggestion TEXT)";
-        //            break;
-        //        default:
-        //            Console.WriteLine("Wrong table name");
-        //            break;
-        //    }
-
-        //    await cmd.ExecuteNonQueryAsync();
-        //}
     }
 }

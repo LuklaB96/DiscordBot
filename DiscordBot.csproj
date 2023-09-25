@@ -1,11 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
     <Platforms>AnyCPU;x86;x64</Platforms>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Discord.Net.Commands" Version="3.12.0" />
     <PackageReference Include="Discord.Net.Core" Version="3.12.0" />
@@ -18,15 +16,17 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
     <PackageReference Include="System.Data.SQLite" Version="1.0.118" />
   </ItemGroup>
-
   <ItemGroup>
     <Folder Include="Interface\" />
   </ItemGroup>
-
   <ItemGroup>
-    <Reference Include="PluginTest">
-      <HintPath>..\..\PluginTest\PluginTest\bin\Release\net7.0\PluginTest.dll</HintPath>
+    <Reference Include="DiscordPluginAPI">
+      <HintPath>..\..\PluginTest\DiscordPluginAPI\bin\Release\net7.0\DiscordPluginAPI.dll</HintPath>
     </Reference>
   </ItemGroup>
-
+  <ItemGroup>
+    <None Update="Settings.job">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

@@ -1,4 +1,5 @@
 ﻿using DiscordBot.Structures;
+using System;
 
 namespace DiscordBot
 {

@@ -1,7 +1,7 @@
 ﻿using DiscordBot.Utility;
 using Microsoft.Extensions.DependencyInjection;
-using PluginTest.Enums;
-using PluginTest.Interfaces;
+using DiscordPluginAPI.Enums;
+using DiscordPluginAPI.Interfaces;
 using System;
 using System.Collections;
 using System.Collections.Generic;
