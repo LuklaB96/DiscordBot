@@ -1,6 +1,4 @@
-﻿using PluginTest.Interfaces;
-
-namespace DiscordBot.AssemblyHelpers
+﻿namespace DiscordBot.AssemblyHelpers
 {
     internal class AssemblyData
     {
