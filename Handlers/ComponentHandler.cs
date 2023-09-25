@@ -2,9 +2,9 @@
 using DiscordBot.Managers;
 using System;
 using System.Threading.Tasks;
-using PluginTest.Interfaces;
+using DiscordPluginAPI.Interfaces;
 using DiscordBot.Utility;
-using PluginTest.Enums;
+using DiscordPluginAPI.Enums;
 using System.Collections.Generic;
 
 namespace DiscordBot.Handlers

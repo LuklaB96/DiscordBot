@@ -1,7 +1,6 @@
-﻿using Discord;
-using DiscordBot.Utility;
+﻿using DiscordBot.Utility;
 using Microsoft.Extensions.DependencyInjection;
-using PluginTest.Enums;
+using DiscordPluginAPI.Enums;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -79,9 +78,9 @@ namespace DiscordBot.Managers
         /// <returns></returns>
         private async Task<Task> CreateBackup()
         {
-            var timer = Stopwatch.StartNew();
-            
+            if(FileList.Count == 0) return Task.CompletedTask;
 
+            var timer = Stopwatch.StartNew();
 
             var date = DateTime.Now;
             string dateString = date.ToString("yyyy-MM-dd");
@@ -107,8 +106,6 @@ namespace DiscordBot.Managers
             var dirFilesCount = Directory.EnumerateFiles(BackupFolderPath, "*", SearchOption.TopDirectoryOnly).Count();
 
             if (dirFilesCount < MaxBackups) return Task.CompletedTask;
-
-            
 
             var dirFiles = Directory.GetFiles(BackupFolderPath, "*", SearchOption.TopDirectoryOnly);
 

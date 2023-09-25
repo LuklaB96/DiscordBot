@@ -1,5 +1,5 @@
-﻿using PluginTest.Enums;
-using PluginTest.Interfaces;
+﻿using DiscordPluginAPI.Enums;
+using DiscordPluginAPI.Interfaces;
 using System;
 
 namespace DiscordBot.Utility
