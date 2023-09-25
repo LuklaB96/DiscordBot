@@ -5,10 +5,11 @@ using System.Threading.Tasks;
 using Discord.WebSocket;
 using DiscordBot.Structures;
 using DiscordBot.Managers;
-using PluginTest.Interfaces;
-using PluginTest.Enums;
+using DiscordPluginAPI.Interfaces;
+using DiscordPluginAPI.Enums;
 using Discord.Rest;
 using DiscordBot.Utility;
+using DiscordPluginAPI.Helpers;
 
 namespace DiscordBot.Handlers
 {
@@ -95,13 +96,12 @@ namespace DiscordBot.Handlers
         private async Task<bool> SaveMessageToDatabase(string messageId, string pluginName)
         {
             string query = "INSERT INTO message_info (message_id, plugin_name) VALUES (@MessageId, @PluginName)";
-            List<KeyValuePair<string, string>> parameters = new()
-            {
-                new KeyValuePair<string, string>("@MessageId",messageId),
-                new KeyValuePair<string, string>("@PluginName",pluginName)
-            };
 
-            var result = await Database.InsertQueryAsync(query, parameters);
+            QueryParametersBuilder parametersBuilder = new QueryParametersBuilder();
+            parametersBuilder.Add("@MessageId", messageId);
+            parametersBuilder.Add("@PluginName", pluginName);
+
+            var result = await Database.InsertQueryAsync(query, parametersBuilder);
             if (result == 1)
             {
                 Logger.Log(pluginName, "Message created: " + messageId, LogLevel.Info);
@@ -117,11 +117,9 @@ namespace DiscordBot.Handlers
         {
             string query = "SELECT plugin_name FROM command_info WHERE command_name = @CommandName";
 
-            List<KeyValuePair<string, string>> parameters = new()
-            {
-                new KeyValuePair<string, string>("@CommandName",commandName)
-            };
-            var items = await Database.SelectQueryAsync(query, parameters);
+            QueryParametersBuilder parametersBuilder = new QueryParametersBuilder();
+            parametersBuilder.Add("@CommandName", commandName);
+            var items = await Database.SelectQueryAsync(query, parametersBuilder);
             if (items.Count == 0) return string.Empty;
             return items[0];
         }

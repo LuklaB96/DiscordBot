@@ -8,10 +8,12 @@ using DiscordBot.Managers;
 using Microsoft.Extensions.Configuration;
 using System.IO;
 using DiscordBot.Utility;
-using PluginTest.Interfaces;
-using PluginTest.Enums;
+using DiscordPluginAPI.Interfaces;
+using DiscordPluginAPI.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
+using DiscordPluginAPI.Helpers;
+using DiscordBot.Configuration;
 
 namespace DiscordBot.Structures
 {
@@ -31,8 +33,8 @@ namespace DiscordBot.Structures
 
         public Bot()
         {
-            appConfig = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("config.json").Build();
             ServiceProvider = CreateServices();
+            appConfig = new ConfigProvider(Directory.GetCurrentDirectory(), "config.json", ServiceProvider).get();
             Database = ServiceProvider.GetService<Database>();
             Logger = ServiceProvider.GetService<Logger>();
             AssemblyManager = new AssemblyManager(ServiceProvider);
@@ -365,17 +367,15 @@ namespace DiscordBot.Structures
             string guildId = guild.Id.ToString();
             string prefix = "!";
 
-            List<KeyValuePair<string, string>> parameters = new()
-            {
-                new KeyValuePair<string, string>("@GuildId",guildId),
-                new KeyValuePair<string, string>("@Prefix",prefix),
-            };
+            QueryParametersBuilder parametersBuilder = new QueryParametersBuilder();
+            parametersBuilder.Add("@GuildId", guildId);
+            parametersBuilder.Add("@Prefix", prefix);
 
-            var data = await Database.SelectQueryAsync(selectGuildSettingsQuery, parameters);
+            var data = await Database.SelectQueryAsync(selectGuildSettingsQuery, parametersBuilder);
 
             if (data.Count > 0) return Task.CompletedTask;
 
-            await Database.InsertQueryAsync(insertSettingsQuery, parameters);
+            await Database.InsertQueryAsync(insertSettingsQuery, parametersBuilder);
 
             return Task.CompletedTask;
         }

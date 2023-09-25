@@ -3,7 +3,8 @@ using Discord.WebSocket;
 using DiscordBot.Managers;
 using DiscordBot.Structures;
 using DiscordBot.Utility;
-using PluginTest.Interfaces;
+using DiscordPluginAPI.Helpers;
+using DiscordPluginAPI.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -37,12 +38,10 @@ namespace DiscordBot.Handlers
 
                 string query = "SELECT plugin_name FROM message_info where message_id = @MessageId";
 
-                List<KeyValuePair<string, string>> parameters = new List<KeyValuePair<string, string>>
-                {
-                    new KeyValuePair<string, string>("@MessageId",message.Id.ToString()),
-                };
+                QueryParametersBuilder parametersBuilder = new QueryParametersBuilder();
+                parametersBuilder.Add("@MessageId", message.Id.ToString());
 
-                var pluginName = await Database.SelectQueryAsync(query,parameters);
+                var pluginName = await Database.SelectQueryAsync(query,parametersBuilder);
                 List<IPluginReactions> plugins = AssemblyManager.Plugins.Get<IPluginReactions>();
                 foreach (IPluginReactions plugin in plugins)
                 {

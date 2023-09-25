@@ -1,19 +1,19 @@
 ﻿using DiscordBot.Structures;
 using DiscordBot.Utility;
-using PluginTest.Interfaces;
-using PluginTest.Enums;
+using DiscordPluginAPI.Interfaces;
+using DiscordPluginAPI.Enums;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using DiscordBot.Enums;
-using PluginTest;
+using DiscordPluginAPI;
 using DiscordBot.AssemblyHelpers;
 using Discord;
 using Discord.WebSocket;
 using DiscordBot.Plugins;
 using Microsoft.Extensions.DependencyInjection;
+using DiscordPluginAPI.Helpers;
 
 namespace DiscordBot.Managers
 {
@@ -178,12 +178,10 @@ namespace DiscordBot.Managers
 
             if (string.IsNullOrEmpty(pluginName)) return AssemblyDatabaseStatus.NOT_EXISTS;
 
-            List<KeyValuePair<string, string>> parameters = new List<KeyValuePair<string, string>>
-            {
-                new KeyValuePair<string, string>("@AssemblyName",assemblyName)
-            };
+            QueryParametersBuilder parametersBuilder = new QueryParametersBuilder();
+            parametersBuilder.Add("@AssemblyName", assemblyName);
 
-            var assemblyData = await Database.SelectQueryAsync(query,parameters);
+            var assemblyData = await Database.SelectQueryAsync(query,parametersBuilder);
 
             if (assemblyData == null || assemblyData.Count == 0) return AssemblyDatabaseStatus.NOT_EXISTS;
             if (assemblyData.Contains(pluginName)) return AssemblyDatabaseStatus.OK;
@@ -210,54 +208,45 @@ namespace DiscordBot.Managers
             string query = "INSERT INTO plugin_properties (assembly_name,plugin_name,plugin_alias) VALUES (@AssemblyName,@PluginName,@PluginAlias)";
 
             pluginAlias ??= string.Empty;
+            QueryParametersBuilder parametersBuilder = new QueryParametersBuilder();
+            parametersBuilder.Add("@AssemblyName", assemblyName);
+            parametersBuilder.Add("@PluginName", pluginName);
+            parametersBuilder.Add("@PluginAlias", pluginAlias);
 
-            List<KeyValuePair<string, string>> parameters = new List<KeyValuePair<string, string>>
-            {
-                new KeyValuePair<string, string>("@AssemblyName",assemblyName),
-                new KeyValuePair<string, string>("@PluginName",pluginName),
-                new KeyValuePair<string, string>("@PluginAlias",pluginAlias)
-            };
-
-            var result = await Database.InsertQueryAsync(query,parameters);
+            var result = await Database.InsertQueryAsync(query,parametersBuilder);
             Logger.Log("Plugin Manager",$"Saved info for {pluginName} to database: {(result == 0 ? "No" : "yes")}",LogLevel.Info);
         }
         private async Task SaveCommandInfoToDatabase(string commandName,string pluginName, string assemblyName)
         {
             string query = "INSERT INTO command_info (command_name,plugin_name,assembly_name) VALUES (@CommandName,@PluginName,@AssemblyName)";
 
-            List<KeyValuePair<string, string>> parameters = new List<KeyValuePair<string, string>>
-            {
-                new KeyValuePair<string, string>("@CommandName",commandName),
-                new KeyValuePair<string, string>("@PluginName",pluginName),
-                new KeyValuePair<string, string>("@AssemblyName",assemblyName)
-            };
-            await Database.InsertQueryAsync(query, parameters);
+            QueryParametersBuilder parametersBuilder = new QueryParametersBuilder();
+            parametersBuilder.Add("@AssemblyName", assemblyName);
+            parametersBuilder.Add("@PluginName", pluginName);
+            parametersBuilder.Add("@CommandName", commandName);
+            await Database.InsertQueryAsync(query, parametersBuilder);
         }
         private async Task SaveModalInfoToDatabase(string modalName, string pluginName, string assemblyName)
         {
             string query = "INSERT INTO modal_info (modal_name,plugin_name,assembly_name) VALUES (@ModalName,@PluginName,@AssemblyName)";
 
-            List<KeyValuePair<string, string>> parameters = new List<KeyValuePair<string, string>>
-            {
-                new KeyValuePair<string, string>("@ModalName",modalName),
-                new KeyValuePair<string, string>("@PluginName",pluginName),
-                new KeyValuePair<string, string>("@AssemblyName",assemblyName)
-            };
+            QueryParametersBuilder parametersBuilder = new QueryParametersBuilder();
+            parametersBuilder.Add("@AssemblyName", assemblyName);
+            parametersBuilder.Add("@PluginName", pluginName);
+            parametersBuilder.Add("@ModalName", modalName);
 
-            await Database.InsertQueryAsync(query, parameters);
+            await Database.InsertQueryAsync(query, parametersBuilder);
         }
         private async Task UpdateAssemblyInfoInDatabase(string assemblyName, string pluginName, string pluginAlias = null)
         {
             string query = "UPDATE plugin_properties SET plugin_name = @PluginName WHERE assembly_name = @AssemblyName";
 
-            List<KeyValuePair<string, string>> parameters = new List<KeyValuePair<string, string>>
-            {
-                new KeyValuePair<string, string>("@AssemblyName",assemblyName),
-                new KeyValuePair<string, string>("@PluginName",pluginName),
-                new KeyValuePair<string, string>("@PluginAlias",pluginAlias)
-            };
+            QueryParametersBuilder parametersBuilder = new QueryParametersBuilder();
+            parametersBuilder.Add("@AssemblyName", assemblyName);
+            parametersBuilder.Add("@PluginName", pluginName);
+            parametersBuilder.Add("@PluginAlias", pluginAlias);
 
-            await Database.UpdateQueryAsync(query, parameters);
+            await Database.UpdateQueryAsync(query, parametersBuilder);
         }
         /// <summary>
         /// Check if global command is claimed by other source.
@@ -270,12 +259,10 @@ namespace DiscordBot.Managers
                 return true;
             string query = "SELECT plugin_name FROM command_info WHERE command_name = @CommandName";
 
-            List<KeyValuePair<string,string>> parameters = new List<KeyValuePair<string, string>> 
-            { 
-                new KeyValuePair<string, string>("@CommandName",commandName) 
-            };
+            QueryParametersBuilder parametersBuilder = new QueryParametersBuilder();
+            parametersBuilder.Add("@CommandName", commandName);
 
-            var data = await Database.SelectQueryAsync(query, parameters);
+            var data = await Database.SelectQueryAsync(query, parametersBuilder);
 
             if (data == null || data.Count == 0) return false;
 
